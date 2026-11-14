@@ -36,7 +36,7 @@ public class LoggingAndPublicAccessTests
     }
 
     [Fact]
-    public async Task PublicEndpoint_NoCookie_StillReachable()
+    public async Task HealthGet_NoCookie_Returns200()
     {
         // Arrange
         using var factory = new PawsPostFactory();
