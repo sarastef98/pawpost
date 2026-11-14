@@ -258,6 +258,34 @@ public class ListPetAdsTests
     }
 
     [Fact]
+    public async Task ListPetAds_KnownLimitNonAsciiSpeciesInDifferentCase_DoesNotMatch()
+    {
+        // Records the accepted limit from plan decision 3: case is ignored only for ASCII letters.
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var ownerId = await factory.SeedOwnerAsync("owner@x.com");
+        var dog = BuildPetAd(ownerId, Day1, species: "Dog");
+        var cyrillicDog = BuildPetAd(ownerId, Day1.AddDays(1), species: "Куче");
+        await factory.SeedAdsAsync(dog, cyrillicDog);
+        var client = factory.CreateApiClient();
+
+        // Act
+        var asciiResponse = await client.GetPetAdsAsync("species=dog");
+        var exactCaseResponse = await client.GetPetAdsAsync($"species={Uri.EscapeDataString("Куче")}");
+        var cyrillicResponse = await client.GetPetAdsAsync($"species={Uri.EscapeDataString("куче")}");
+
+        // Assert
+        using var asciiJson = await ReadJsonAsync(asciiResponse);
+        Assert.Equal([dog.Id], ItemIds(asciiJson));
+        using var exactCaseJson = await ReadJsonAsync(exactCaseResponse);
+        Assert.Equal([cyrillicDog.Id], ItemIds(exactCaseJson));
+        Assert.Equal(HttpStatusCode.OK, cyrillicResponse.StatusCode);
+        using var cyrillicJson = await ReadJsonAsync(cyrillicResponse);
+        Assert.Empty(ItemIds(cyrillicJson));
+        Assert.Equal(0, cyrillicJson.RootElement.GetProperty("totalCount").GetInt32());
+    }
+
+    [Fact]
     public async Task ListPetAds_SpeciesWithSurroundingSpaces_IsTrimmed()
     {
         // Arrange
