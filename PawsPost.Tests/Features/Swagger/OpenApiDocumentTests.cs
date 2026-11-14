@@ -34,15 +34,17 @@ public class OpenApiDocumentTests(PawsPostFactory factory) : IClassFixture<PawsP
     }
 
     [Fact]
-    public async Task GetOpenApiDocument_CreatePetAdRequest_ListsExpectedFields()
+    public async Task GetOpenApiDocument_PetAdsPostBody_ResolvesToSchemaWithExpectedFields()
     {
         // Arrange
         using var document = await GetOpenApiDocumentAsync();
+        var bodySchema = GetPetAdsPostBody(document).GetProperty("content").GetProperty("application/json").GetProperty("schema");
 
-        // Act
+        // Act: follow the $ref from the POST body, the same way Swagger UI does.
+        var schemaName = bodySchema.GetProperty("$ref").GetString()!.Split('/').Last();
         var properties = document.RootElement
             .GetProperty("components").GetProperty("schemas")
-            .GetProperty("CreatePetAdRequest").GetProperty("properties");
+            .GetProperty(schemaName).GetProperty("properties");
         var names = properties.EnumerateObject().Select(property => property.Name).ToList();
 
         // Assert
@@ -55,12 +57,13 @@ public class OpenApiDocumentTests(PawsPostFactory factory) : IClassFixture<PawsP
     private async Task<JsonDocument> GetOpenApiDocumentAsync()
     {
         using var developmentFactory = factory.WithWebHostBuilder(builder => builder.UseEnvironment("Development"));
-        var client = developmentFactory.CreateClient();
+        using var client = developmentFactory.CreateClient();
 
-        var response = await client.GetAsync("/openapi/v1.json");
+        using var response = await client.GetAsync("/openapi/v1.json");
         response.EnsureSuccessStatusCode();
 
-        return await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
+        await using var stream = await response.Content.ReadAsStreamAsync();
+        return await JsonDocument.ParseAsync(stream);
     }
 
     private static JsonElement GetPetAdsPostBody(JsonDocument document) =>
