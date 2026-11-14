@@ -19,7 +19,7 @@ The plan is: $ARGUMENTS
 6. Create the branch from `main` with `git switch main` then `git switch -c <branch>`. If the branch already exists, stop and ask.
 7. Commit the issue and plan files first: `docs: add issue and plan (#<number>)`.
 8. Use the `developer` agent with the plan path. If it reports that it is blocked, show the user the reason and stop.
-9. Use the `test-writer` agent with the plan path. If it reports a bug in the application code, show the user and stop. Do not fix it yourself.
+9. Use the `test-writer` agent with the plan path. If it reports a bug, show the user the failing test and the reason, then ask: fix it now on this branch (send it to the `developer` agent with the failing test, then run the `test-writer` again), or open a bug issue on GitHub (follow `templates/bug.md`, use the GitHub tools, label `bug`, and only after a clear yes). Never fix the code yourself.
 10. Show the user: the commits (`git log main..HEAD --oneline`), the changed files (`git diff main --stat`), the `dotnet test` result, and anything skipped or blocked.
 11. Tell the user to review the changes, and that the pull request and the reviews come next. Do not push.
 
