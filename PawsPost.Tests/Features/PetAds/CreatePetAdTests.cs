@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using PawsPost.Data;
 using PawsPost.Features.PetAds;
 using PawsPost.Tests.Infrastructure;
+using static PawsPost.Tests.Infrastructure.PetAdTestHelpers;
 
 namespace PawsPost.Tests.Features.PetAds;
 
@@ -725,14 +726,4 @@ public class CreatePetAdTests
         Assert.Empty(await factory.GetStoredAdsAsync());
     }
 
-    private static async Task AssertBadRequestForOnlyAsync(HttpResponseMessage response, string field)
-    {
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
-        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
-        Assert.NotNull(problem);
-        var error = Assert.Single(problem.Errors);
-        Assert.Equal(field, error.Key.TrimStart('$', '.'), ignoreCase: true);
-        Assert.Single(error.Value);
-    }
 }
