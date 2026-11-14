@@ -515,6 +515,40 @@ public class CreatePetAdTests
     }
 
     [Fact]
+    public async Task CreatePetAd_LiteralNullBody_Returns400ProblemDetailsAndStoresNothing()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("a@x.com");
+        using var content = new StringContent("null", System.Text.Encoding.UTF8, "application/json");
+
+        // Act
+        var response = await client.PostAsync(PetAdTestHelpers.PetAdsUrl, content);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        Assert.Empty(await factory.GetStoredAdsAsync());
+    }
+
+    [Fact]
+    public async Task CreatePetAd_EmptyBody_Returns400ProblemDetailsAndStoresNothing()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("a@x.com");
+        using var content = new StringContent(string.Empty, System.Text.Encoding.UTF8, "application/json");
+
+        // Act
+        var response = await client.PostAsync(PetAdTestHelpers.PetAdsUrl, content);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        Assert.Empty(await factory.GetStoredAdsAsync());
+    }
+
+    [Fact]
     public async Task CreatePetAd_SeveralInvalidFields_ReportsEachFieldOnce()
     {
         // Arrange
