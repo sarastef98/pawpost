@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import Button from '../../components/Button'
 import EmptyState from '../../components/EmptyState'
@@ -134,15 +134,21 @@ export default function PetAdList() {
     )
   }
 
-  let summary = ''
-  if (
-    state.status === 'success' &&
-    !outOfRange &&
-    state.data.items.length > 0
-  ) {
-    const count = state.data.totalCount
-    summary = `${count} ${count === 1 ? 'ad' : 'ads'} found`
+  // The live region keeps its last text while loading, so paging with the same
+  // count announces nothing new. It only changes once a result is settled.
+  let settledSummary: string | null = null
+  if (state.status !== 'loading' && !outOfRange) {
+    settledSummary = ''
+    if (state.status === 'success' && state.data.items.length > 0) {
+      const count = state.data.totalCount
+      settledSummary = `${count} ${count === 1 ? 'ad' : 'ads'} found`
+    }
   }
+  const [announced, setAnnounced] = useState('')
+  if (settledSummary !== null && settledSummary !== announced) {
+    setAnnounced(settledSummary)
+  }
+  const summary = settledSummary ?? announced
 
   return (
     <section className="flex flex-col gap-4">

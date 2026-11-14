@@ -592,6 +592,48 @@ describe('PetAdList', () => {
 
       expect(summary).toHaveAttribute('aria-live', 'polite')
     })
+
+    it('keeps the same count in the live region while the next page loads', async () => {
+      get.mockResolvedValueOnce(okResult(listBody([ad()], 45)))
+      get.mockReturnValueOnce(new Promise(() => {}))
+      renderList()
+      await screen.findByText('Friendly Rex')
+
+      await userEvent.click(screen.getByRole('button', { name: 'Next' }))
+
+      expect(screen.getByRole('status')).toHaveTextContent('Loading')
+      expect(screen.getByText('45 ads found')).toHaveAttribute(
+        'aria-live',
+        'polite',
+      )
+    })
+
+    it('announces the new count when the filters change it', async () => {
+      get.mockResolvedValueOnce(okResult(listBody([ad()], 45)))
+      get.mockResolvedValueOnce(okResult(listBody([ad()], 3)))
+      renderList()
+      await screen.findByText('45 ads found')
+
+      await userEvent.type(screen.getByLabelText('Species'), 'Dog{Enter}')
+
+      expect(await screen.findByText('3 ads found')).toHaveAttribute(
+        'aria-live',
+        'polite',
+      )
+      expect(screen.queryByText('45 ads found')).not.toBeInTheDocument()
+    })
+
+    it('empties the live region when a later request fails', async () => {
+      get.mockResolvedValueOnce(okResult(listBody([ad()], 45)))
+      get.mockResolvedValueOnce(failResult(500))
+      renderList()
+      await screen.findByText('45 ads found')
+
+      await userEvent.click(screen.getByRole('button', { name: 'Next' }))
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(ERROR_TEXT)
+      expect(screen.queryByText('45 ads found')).not.toBeInTheDocument()
+    })
   })
 
   describe('URL state', () => {
