@@ -712,6 +712,89 @@ public class ListPetAdsTests
     }
 
     [Fact]
+    public async Task ListPetAds_TypeRepeated_UsesFirstValue()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var ownerId = await factory.SeedOwnerAsync("owner@x.com");
+        var sale = BuildPetAd(ownerId, Day1, type: PetAdType.Sale, price: 10m);
+        await factory.SeedAdsAsync(sale, BuildPetAd(ownerId, Day1.AddDays(1)));
+        var client = factory.CreateApiClient();
+
+        // Act
+        var response = await client.GetPetAdsAsync("type=Sale&type=Adoption");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = await ReadJsonAsync(response);
+        Assert.Equal([sale.Id], ItemIds(json));
+        Assert.Equal(1, json.RootElement.GetProperty("totalCount").GetInt32());
+    }
+
+    [Fact]
+    public async Task ListPetAds_PageRepeated_UsesFirstValue()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var ownerId = await factory.SeedOwnerAsync("owner@x.com");
+        var older = BuildPetAd(ownerId, Day1);
+        var newer = BuildPetAd(ownerId, Day1.AddDays(1));
+        await factory.SeedAdsAsync(older, newer);
+        var client = factory.CreateApiClient();
+
+        // Act
+        var response = await client.GetPetAdsAsync("pageSize=1&page=1&page=2");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = await ReadJsonAsync(response);
+        Assert.Equal([newer.Id], ItemIds(json));
+        Assert.Equal(1, json.RootElement.GetProperty("page").GetInt32());
+    }
+
+    [Fact]
+    public async Task ListPetAds_TypeEmpty_ReturnsAllActiveAds()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var ownerId = await factory.SeedOwnerAsync("owner@x.com");
+        await factory.SeedAdsAsync(
+            BuildPetAd(ownerId, Day1),
+            BuildPetAd(ownerId, Day1.AddDays(1), type: PetAdType.Sale, price: 10m));
+        var client = factory.CreateApiClient();
+
+        // Act
+        var response = await client.GetPetAdsAsync("type=");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = await ReadJsonAsync(response);
+        Assert.Equal(2, ItemIds(json).Count);
+        Assert.Equal(2, json.RootElement.GetProperty("totalCount").GetInt32());
+    }
+
+    [Theory]
+    [InlineData("species=%00")]
+    [InlineData("species=Dog%00")]
+    public async Task ListPetAds_SpeciesWithNullCharacter_Returns200WithNoMatches(string query)
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var ownerId = await factory.SeedOwnerAsync("owner@x.com");
+        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: "Dog"));
+        var client = factory.CreateApiClient();
+
+        // Act
+        var response = await client.GetPetAdsAsync(query);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = await ReadJsonAsync(response);
+        Assert.Empty(ItemIds(json));
+        Assert.Equal(0, json.RootElement.GetProperty("totalCount").GetInt32());
+    }
+
+    [Fact]
     public async Task ListPetAds_NotLoggedIn_Returns200()
     {
         // Arrange
