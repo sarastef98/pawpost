@@ -213,8 +213,8 @@ describe('RegisterPage', () => {
     const button = screen.getByRole('button', { name: 'Please wait...' })
     expect(button).toBeDisabled()
     expect(button).toHaveAttribute('aria-busy', 'true')
-    expect(screen.getByLabelText('Email')).toBeDisabled()
-    expect(screen.getByLabelText('Password')).toBeDisabled()
+    expect(screen.getByLabelText('Email')).toHaveAttribute('readonly')
+    expect(screen.getByLabelText('Password')).toHaveAttribute('readonly')
 
     pending.resolve(okResult(testUser, 201))
     await screen.findByRole('heading', { level: 1, name: 'Log in' })
@@ -296,5 +296,42 @@ describe('RegisterPage', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: 'Create your account' }),
     ).toBeInTheDocument()
+  })
+})
+
+describe('RegisterPage focus after a failed submit', () => {
+  it('moves focus to the password field when only the password is empty', async () => {
+    const user = userEvent.setup()
+    renderRegister()
+
+    await user.type(await screen.findByLabelText('Email'), 'sara@example.com')
+    await user.click(screen.getByRole('button', { name: 'Create account' }))
+
+    expect(screen.getByLabelText('Password')).toHaveFocus()
+  })
+
+  it('moves focus to the email field when the server rejects the email', async () => {
+    const user = userEvent.setup()
+    post.mockResolvedValue(
+      failResult(400, { errors: { Email: ['Email is not valid.'] } }),
+    )
+    renderRegister()
+
+    await fillAndSubmit(user)
+
+    await screen.findByText('Email is not valid.')
+    expect(screen.getByLabelText('Email')).toHaveFocus()
+  })
+
+  it('moves focus to the error message when the email is taken', async () => {
+    const user = userEvent.setup()
+    post.mockResolvedValue(failResult(409))
+    renderRegister()
+
+    await fillAndSubmit(user)
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(TAKEN)
+    expect(document.activeElement).toContainElement(alert)
   })
 })

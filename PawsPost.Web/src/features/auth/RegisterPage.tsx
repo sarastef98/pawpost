@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Button from '../../components/Button'
@@ -19,6 +19,22 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState<FormErrors>({})
   const [busy, setBusy] = useState(false)
   const submitting = useRef(false)
+  const formRef = useRef<HTMLFormElement>(null)
+  const alertRef = useRef<HTMLDivElement>(null)
+
+  // After a failed submit, move focus to the first field with an error, or
+  // to the general message, so keyboard and screen reader users find it.
+  // TextField marks a field with an error as aria-invalid.
+  useEffect(() => {
+    const invalidField = formRef.current?.querySelector<HTMLInputElement>(
+      'input[aria-invalid="true"]',
+    )
+    if (invalidField) {
+      invalidField.focus()
+    } else if (errors.general) {
+      alertRef.current?.focus()
+    }
+  }, [errors])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -57,7 +73,7 @@ export default function RegisterPage() {
       <h1 className="text-2xl">Create your account</h1>
       <Card className="flex flex-col gap-4">
         {errors.general && (
-          <div>
+          <div ref={alertRef} tabIndex={-1}>
             <ErrorMessage message={errors.general} />
             {errors.emailTaken && (
               <p className="text-center text-base">
@@ -72,6 +88,7 @@ export default function RegisterPage() {
           </div>
         )}
         <form
+          ref={formRef}
           noValidate
           onSubmit={handleSubmit}
           className="flex flex-col gap-4"
@@ -83,7 +100,7 @@ export default function RegisterPage() {
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             errorText={errors.email}
-            disabled={busy}
+            readOnly={busy}
           />
           <TextField
             label="Password"
@@ -92,7 +109,7 @@ export default function RegisterPage() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             errorText={errors.password}
-            disabled={busy}
+            readOnly={busy}
           />
           <Button type="submit" disabled={busy} aria-busy={busy}>
             {busy ? 'Please wait...' : 'Create account'}

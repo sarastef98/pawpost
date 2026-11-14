@@ -211,8 +211,8 @@ describe('LoginPage', () => {
     const button = screen.getByRole('button', { name: 'Please wait...' })
     expect(button).toBeDisabled()
     expect(button).toHaveAttribute('aria-busy', 'true')
-    expect(screen.getByLabelText('Email')).toBeDisabled()
-    expect(screen.getByLabelText('Password')).toBeDisabled()
+    expect(screen.getByLabelText('Email')).toHaveAttribute('readonly')
+    expect(screen.getByLabelText('Password')).toHaveAttribute('readonly')
 
     pending.resolve(okResult(testUser))
     await screen.findByRole('heading', {
@@ -333,5 +333,61 @@ describe('LoginPage', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: 'Log in' }),
     ).toBeInTheDocument()
+  })
+})
+
+describe('LoginPage focus after a failed submit', () => {
+  it('keeps focus in the password field while the request runs', async () => {
+    const user = userEvent.setup()
+    const pending = deferred<ReturnType<typeof okResult>>()
+    post.mockReturnValue(pending.promise)
+    renderLogin()
+
+    await user.type(await screen.findByLabelText('Email'), 'sara@example.com')
+    await user.type(screen.getByLabelText('Password'), 'Secret1!{Enter}')
+
+    expect(
+      screen.getByRole('button', { name: 'Please wait...' }),
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('Password')).toHaveFocus()
+
+    pending.resolve(okResult(testUser))
+    await screen.findByRole('heading', {
+      level: 1,
+      name: 'Welcome to PawsPost',
+    })
+  })
+
+  it('moves focus to the email field when both fields are empty', async () => {
+    const user = userEvent.setup()
+    renderLogin()
+
+    await user.click(await screen.findByRole('button', { name: 'Log in' }))
+
+    expect(screen.getByLabelText('Email')).toHaveFocus()
+  })
+
+  it('moves focus to the password field when only the password has a server error', async () => {
+    const user = userEvent.setup()
+    post.mockResolvedValue(
+      failResult(400, { errors: { Password: ['Password is not valid.'] } }),
+    )
+    renderLogin()
+
+    await fillAndSubmit(user)
+
+    await screen.findByText('Password is not valid.')
+    expect(screen.getByLabelText('Password')).toHaveFocus()
+  })
+
+  it('moves focus to the error message when there is no field error', async () => {
+    const user = userEvent.setup()
+    post.mockResolvedValue(failResult(401))
+    renderLogin()
+
+    await fillAndSubmit(user)
+
+    const alert = await screen.findByRole('alert')
+    expect(document.activeElement).toContainElement(alert)
   })
 })
