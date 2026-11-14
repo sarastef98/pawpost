@@ -1,0 +1,61 @@
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it } from 'vitest'
+import TextField from './TextField'
+
+describe('TextField', () => {
+  it('links the label to the input', () => {
+    render(<TextField label="Email" />)
+
+    expect(screen.getByLabelText('Email')).toBeInTheDocument()
+  })
+
+  it('updates the value when the user types', async () => {
+    render(<TextField label="Email" />)
+
+    await userEvent.type(screen.getByLabelText('Email'), 'hello')
+
+    expect(screen.getByLabelText('Email')).toHaveValue('hello')
+  })
+
+  it('shows helper text linked to the input', () => {
+    render(<TextField label="Email" helperText="We never share it" />)
+
+    expect(screen.getByText('We never share it')).toBeInTheDocument()
+    expect(screen.getByLabelText('Email')).toHaveAccessibleDescription(
+      'We never share it',
+    )
+    expect(screen.getByLabelText('Email')).not.toHaveAttribute('aria-invalid')
+  })
+
+  it('shows error text and marks the input invalid', () => {
+    render(<TextField label="Email" errorText="Email is required" />)
+
+    expect(screen.getByText('Email is required')).toBeInTheDocument()
+    expect(screen.getByLabelText('Email')).toBeInvalid()
+    expect(screen.getByLabelText('Email')).toHaveAccessibleDescription(
+      'Email is required',
+    )
+  })
+
+  it('shows the error instead of the helper text when both are given', () => {
+    render(
+      <TextField
+        label="Email"
+        helperText="We never share it"
+        errorText="Email is required"
+      />,
+    )
+
+    expect(screen.queryByText('We never share it')).not.toBeInTheDocument()
+    expect(screen.getByText('Email is required')).toBeInTheDocument()
+  })
+
+  it('can be focused with the keyboard', async () => {
+    render(<TextField label="Email" />)
+
+    await userEvent.tab()
+
+    expect(screen.getByLabelText('Email')).toHaveFocus()
+  })
+})
