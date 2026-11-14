@@ -6,15 +6,24 @@ import App from './App'
 import { AuthProvider } from './features/auth/AuthContext'
 
 // The auth provider asks the API who is logged in. Tests answer "nobody" (401)
-// at the API client boundary.
+// at the API client boundary. The home page asks for the ads list and gets an
+// empty one.
 vi.mock('./api/client', () => ({
   client: {
-    GET: vi.fn(() =>
-      Promise.resolve({
-        data: undefined,
-        error: {},
-        response: { status: 401, ok: false },
-      }),
+    GET: vi.fn((path: string) =>
+      Promise.resolve(
+        path === '/api/pet-ads'
+          ? {
+              data: { items: [], totalCount: 0, page: 1, pageSize: 20 },
+              error: undefined,
+              response: { status: 200, ok: true },
+            }
+          : {
+              data: undefined,
+              error: {},
+              response: { status: 401, ok: false },
+            },
+      ),
     ),
     POST: vi.fn(),
   },
