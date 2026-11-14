@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { client } from '../../api/client'
 import { PAGE_SIZE, toListData } from './petAdListQuery'
 import type { ListQuery, PetAdListData } from './petAdListQuery'
@@ -57,13 +57,14 @@ export function usePetAdList(query: ListQuery) {
 
   const retry = useCallback(() => setAttempt((n) => n + 1), [])
 
-  let state: PetAdListState = { status: 'loading' }
-  if (stored !== null && stored.key === key) {
-    state =
-      stored.data === null
-        ? { status: 'error' }
-        : { status: 'success', data: stored.data }
-  }
+  // Memoized so the state object only changes when the result or the query
+  // changes, not on every render.
+  const state = useMemo<PetAdListState>(() => {
+    if (stored === null || stored.key !== key) return { status: 'loading' }
+    return stored.data === null
+      ? { status: 'error' }
+      : { status: 'success', data: stored.data }
+  }, [stored, key])
 
   return { state, retry }
 }

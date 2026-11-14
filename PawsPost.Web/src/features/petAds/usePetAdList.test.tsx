@@ -169,6 +169,18 @@ describe('usePetAdList', () => {
     expect(get).toHaveBeenCalledTimes(1)
   })
 
+  it('returns the same state object when it renders again with nothing new', async () => {
+    get.mockResolvedValue(okResult(listBody('Rex')))
+
+    const { result, rerender } = renderHook(() => usePetAdList(first))
+    await waitFor(() => expect(result.current.state.status).toBe('success'))
+    const before = result.current.state
+
+    rerender()
+
+    expect(result.current.state).toBe(before)
+  })
+
   it('asks again with the same query when retry is called', async () => {
     get.mockResolvedValueOnce(failResult(500))
     get.mockResolvedValueOnce(okResult(listBody('Rex')))
