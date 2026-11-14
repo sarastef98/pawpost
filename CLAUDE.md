@@ -11,7 +11,7 @@ client meeting notes -> GitHub issue -> dev plan -> implementation -> tests -> P
 - Backend: C#, ASP.NET Core Web API (controllers) on .NET 10 LTS (`PawsPost`)
 - Data access: EF Core with SQLite for now, schema changes through EF migrations
 - Tests: xUnit with plain `Assert`, `WebApplicationFactory` for API tests (`PawsPost.Tests`)
-- Frontend, built after the backend: React + TypeScript + Vite (`src/PawsPost.Web`)
+- Frontend, built after the backend: React + TypeScript + Vite (`PawsPost.Web`)
 - Source control: GitHub. Issues and PRs are the source of truth for work.
 
 Nothing is built yet. Everything arrives through the pipeline, one small feature at a time.
