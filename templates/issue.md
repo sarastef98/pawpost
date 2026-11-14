@@ -1,5 +1,8 @@
 # <Short title in imperative form>
 
+Layer: <backend | frontend>
+Depends on: <issue number, or none>
+
 ## Summary
 <One or two sentences.>
 
