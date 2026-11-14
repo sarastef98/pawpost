@@ -107,6 +107,10 @@ describe('usePetAdList', () => {
     await waitFor(() => expect(result.current.state.status).toBe('success'))
   })
 
+  // The cancel flag and the derived request key overlap in this test: it
+  // still passes when the key check is removed, so it is not proof of either
+  // defense alone. The "same query after going back" test below is the one
+  // that needs the cancel flag.
   it('ignores a slow older response that arrives after a newer one', async () => {
     const slow = deferred<ReturnType<typeof okResult>>()
     const fast = deferred<ReturnType<typeof okResult>>()
@@ -127,7 +131,33 @@ describe('usePetAdList', () => {
     }
   })
 
-  it('does not update after it is unmounted', async () => {
+  it('ignores an older response for the same query after going back to it', async () => {
+    const olderFirst = deferred<ReturnType<typeof okResult>>()
+    const secondPage = deferred<ReturnType<typeof okResult>>()
+    const newerFirst = deferred<ReturnType<typeof okResult>>()
+    get
+      .mockReturnValueOnce(olderFirst.promise)
+      .mockReturnValueOnce(secondPage.promise)
+      .mockReturnValueOnce(newerFirst.promise)
+
+    const { result, rerender } = renderHook(
+      ({ query }) => usePetAdList(query),
+      { initialProps: { query: first } },
+    )
+    rerender({ query: { ...first, page: 2 } })
+    rerender({ query: first })
+    await act(async () => newerFirst.resolve(okResult(listBody('New'))))
+    await act(async () => olderFirst.resolve(okResult(listBody('Old'))))
+
+    const state = result.current.state
+    expect(get).toHaveBeenCalledTimes(3)
+    expect(state.status).toBe('success')
+    if (state.status === 'success') {
+      expect(state.data.items[0].title).toBe('New')
+    }
+  })
+
+  it('does not crash when a response arrives after it is unmounted', async () => {
     const pending = deferred<ReturnType<typeof okResult>>()
     get.mockReturnValueOnce(pending.promise)
 

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -536,7 +536,29 @@ describe('PetAdList', () => {
       expect(screen.getByText('Newer')).toBeInTheDocument()
     })
 
-    it('ignores a response that arrives after the page is left', async () => {
+    it('shows the newer list when an older response for the same filters arrives late', async () => {
+      const older = deferred<ReturnType<typeof okResult>>()
+      const filtered = deferred<ReturnType<typeof okResult>>()
+      get
+        .mockReturnValueOnce(older.promise)
+        .mockReturnValueOnce(filtered.promise)
+        .mockResolvedValueOnce(okResult(listBody([ad({ title: 'Newer' })])))
+      renderList()
+
+      await userEvent.type(screen.getByLabelText('Species'), 'Dog{Enter}')
+      await userEvent.clear(screen.getByLabelText('Species'))
+      await userEvent.type(screen.getByLabelText('Species'), '{Enter}')
+      expect(await screen.findByText('Newer')).toBeInTheDocument()
+      await act(async () =>
+        older.resolve(okResult(listBody([ad({ title: 'Older' })]))),
+      )
+
+      expect(get).toHaveBeenCalledTimes(3)
+      expect(screen.queryByText('Older')).not.toBeInTheDocument()
+      expect(screen.getByText('Newer')).toBeInTheDocument()
+    })
+
+    it('does not crash when a response arrives after the page is left', async () => {
       const pending = deferred<ReturnType<typeof okResult>>()
       get.mockReturnValueOnce(pending.promise)
       const { unmount } = render(
