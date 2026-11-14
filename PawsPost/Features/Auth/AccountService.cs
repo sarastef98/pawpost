@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using PawsPost.Data;
 
 namespace PawsPost.Features.Auth;
@@ -7,6 +8,7 @@ public class AccountService(UserManager<User> userManager, SignInManager<User> s
 {
     public async Task<RegisterResult> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
     {
+        // FindByEmailAsync and CreateAsync take no CancellationToken, so we check it once before starting.
         cancellationToken.ThrowIfCancellationRequested();
 
         var email = request.Email.Trim();
@@ -37,6 +39,7 @@ public class AccountService(UserManager<User> userManager, SignInManager<User> s
 
     public async Task<UserResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
     {
+        // FindByEmailAsync and PasswordSignInAsync take no CancellationToken, so we check it once before starting.
         cancellationToken.ThrowIfCancellationRequested();
 
         var user = await userManager.FindByEmailAsync(request.Email.Trim());
@@ -54,15 +57,17 @@ public class AccountService(UserManager<User> userManager, SignInManager<User> s
 
     public async Task<UserResponse?> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var user = await userManager.FindByIdAsync(userId.ToString());
-
-        return user is null ? null : new UserResponse(user.Id, user.Email!);
+        // Read-only query: no tracking, and the token reaches the database call.
+        return await userManager.Users
+            .AsNoTracking()
+            .Where(user => user.Id == userId)
+            .Select(user => new UserResponse(user.Id, user.Email!))
+            .SingleOrDefaultAsync(cancellationToken);
     }
 
     public async Task LogoutAsync(CancellationToken cancellationToken)
     {
+        // SignOutAsync takes no CancellationToken, so we check it once before starting.
         cancellationToken.ThrowIfCancellationRequested();
 
         await signInManager.SignOutAsync();
