@@ -556,6 +556,200 @@ public class ListPetAdsTests
         Assert.DoesNotContain(ownerId.ToString(), text, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("0")]
+    [InlineData("-1")]
+    public async Task ListPetAds_PageBelowOne_Returns400WithOnlyThatField(string page)
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = factory.CreateApiClient();
+
+        // Act
+        var response = await client.GetPetAdsAsync($"page={page}");
+
+        // Assert
+        await AssertBadRequestForOnlyAsync(response, "page");
+    }
+
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("99999999999")]
+    public async Task ListPetAds_PageNotANumber_Returns400(string page)
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = factory.CreateApiClient();
+
+        // Act
+        var response = await client.GetPetAdsAsync($"page={page}");
+
+        // Assert
+        await AssertBadRequestForOnlyAsync(response, "page");
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("-1")]
+    [InlineData("101")]
+    public async Task ListPetAds_PageSizeOutOfRange_Returns400WithOnlyThatField(string pageSize)
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = factory.CreateApiClient();
+
+        // Act
+        var response = await client.GetPetAdsAsync($"pageSize={pageSize}");
+
+        // Assert
+        await AssertBadRequestForOnlyAsync(response, "pageSize");
+    }
+
+    [Fact]
+    public async Task ListPetAds_PageSizeNotANumber_Returns400()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = factory.CreateApiClient();
+
+        // Act
+        var response = await client.GetPetAdsAsync("pageSize=abc");
+
+        // Assert
+        await AssertBadRequestForOnlyAsync(response, "pageSize");
+    }
+
+    [Fact]
+    public async Task ListPetAds_TypeUnknownName_Returns400WithOnlyThatField()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = factory.CreateApiClient();
+
+        // Act
+        var response = await client.GetPetAdsAsync("type=Barter");
+
+        // Assert
+        await AssertBadRequestForOnlyAsync(response, "type");
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("1")]
+    [InlineData("99")]
+    public async Task ListPetAds_TypeNumeric_Returns400WithOnlyThatField(string type)
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = factory.CreateApiClient();
+
+        // Act
+        var response = await client.GetPetAdsAsync($"type={type}");
+
+        // Assert
+        await AssertBadRequestForOnlyAsync(response, "type");
+    }
+
+    [Fact]
+    public async Task ListPetAds_SpeciesOneOverMaxLength_Returns400WithOnlyThatField()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = factory.CreateApiClient();
+
+        // Act
+        var response = await client.GetPetAdsAsync($"species={new string('a', 51)}");
+
+        // Assert
+        await AssertBadRequestForOnlyAsync(response, "species");
+    }
+
+    [Fact]
+    public async Task ListPetAds_SeveralInvalidParameters_ReportsEachFieldOnce()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = factory.CreateApiClient();
+
+        // Act
+        var response = await client.GetPetAdsAsync($"page=0&pageSize=101&species={new string('a', 51)}&type=Barter");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ValidationProblemDetails>();
+        Assert.NotNull(problem);
+        Assert.Equal(["page", "pagesize", "species", "type"], problem.Errors.Keys.Select(key => key.ToLowerInvariant()).Order());
+        Assert.All(problem.Errors.Values, messages => Assert.Single(messages));
+    }
+
+    [Fact]
+    public async Task ListPetAds_NotLoggedIn_Returns200()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = factory.CreateApiClient();
+
+        // Act
+        var response = await client.GetPetAdsAsync();
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ListPetAds_TamperedCookie_Returns200()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = factory.CreateApiClient();
+        using var request = new HttpRequestMessage(HttpMethod.Get, PetAdsUrl);
+        request.Headers.Add("Cookie", "pawspost.auth=tampered-value-that-is-not-valid");
+
+        // Act
+        var response = await client.SendAsync(request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ListPetAds_LoggedInOwnerWithClosedAd_ClosedAdIsNotListed()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var ownerClient = await factory.CreateLoggedInClientAsync("owner@x.com");
+        var ownerId = await ownerClient.GetMyIdAsync();
+        var active = BuildPetAd(ownerId, Day1);
+        await factory.SeedAdsAsync(active, BuildPetAd(ownerId, Day1.AddDays(1), status: PetAdStatus.Closed));
+
+        // Act
+        var response = await ownerClient.GetPetAdsAsync();
+
+        // Assert
+        using var json = await ReadJsonAsync(response);
+        Assert.Equal([active.Id], ItemIds(json));
+        Assert.Equal(1, json.RootElement.GetProperty("totalCount").GetInt32());
+    }
+
+    [Fact]
+    public async Task CreatePetAd_NotLoggedInAfterPublicList_StillReturns401()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = factory.CreateApiClient();
+
+        // Act
+        var listResponse = await client.GetPetAdsAsync();
+        var createResponse = await client.PostPetAdAsync(ValidAdoptionBody());
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, createResponse.StatusCode);
+        Assert.Equal("application/problem+json", createResponse.Content.Headers.ContentType?.MediaType);
+        Assert.Empty(await factory.GetStoredAdsAsync());
+    }
+
     private static async Task<JsonDocument> ReadJsonAsync(HttpResponseMessage response)
     {
         return JsonDocument.Parse(await response.Content.ReadAsStringAsync());
