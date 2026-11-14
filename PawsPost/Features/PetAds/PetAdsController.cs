@@ -60,7 +60,7 @@ public class PetAdsController(IPetAdService petAdService) : ControllerBase
         // The owner always comes from the login cookie, never from the request body.
         var ad = await petAdService.CreateAsync(User.GetUserId(), request, cancellationToken);
 
-        // No Location header yet: there is no "get one ad" endpoint.
-        return StatusCode(StatusCodes.Status201Created, ad);
+        // 201 with a Location header that points at the details endpoint.
+        return CreatedAtRoute(GetByIdRouteName, new { id = ad.Id }, ad);
     }
 }
