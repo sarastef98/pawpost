@@ -24,8 +24,9 @@ function toTypeFilter(value: string): AdTypeFilter {
 }
 
 // The form stays mounted, so the focused field keeps focus after Apply. When
-// the URL filters change (Apply, Back or Forward, Clear filters) the inputs
-// are set to the new URL values during render, without remounting the form.
+// the URL filters change (Apply, Back or Forward when the filters differ,
+// Clear filters) the inputs are set to the new URL values during render,
+// without remounting the form.
 export default function PetAdFilters({
   type,
   species,
