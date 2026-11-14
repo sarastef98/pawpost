@@ -108,3 +108,11 @@ Keep it simple. This is a straightforward CRUD app, so no CQRS and no extra laye
 - `templates/` meeting notes, issue, PR and plan templates
 - `docs/meeting-notes/` raw client notes (pipeline input)
 - `docs/plans/` development plans, one per issue
+
+## Autonomy
+
+Automatic, without asking: pushing feature branches, opening pull requests, posting review comments, running the review-fixer (maximum two rounds), pushing fixes to the feature branch.
+
+Needs a person: approving a plan, answering client questions, merging to `main`, and anything that changes requirements.
+
+Stop and report instead of guessing: a plan that is blocked or has unanswered questions, tests that still fail after two attempts, a review finding that needs a client decision.
