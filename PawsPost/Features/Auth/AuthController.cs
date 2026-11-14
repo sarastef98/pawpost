@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using PawsPost.Common;
 
 namespace PawsPost.Features.Auth;
 
@@ -36,6 +38,19 @@ public class AuthController(IAccountService accountService) : ControllerBase
 
         return user is null
             ? Problem(title: "Invalid credentials", statusCode: StatusCodes.Status401Unauthorized)
+            : Ok(user);
+    }
+
+    [Authorize]
+    [HttpGet("me")]
+    [ProducesResponseType<UserResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetMeAsync(CancellationToken cancellationToken)
+    {
+        var user = await accountService.GetCurrentUserAsync(User.GetUserId(), cancellationToken);
+
+        return user is null
+            ? Problem(title: "Authentication required", statusCode: StatusCodes.Status401Unauthorized)
             : Ok(user);
     }
 }
