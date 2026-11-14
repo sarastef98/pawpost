@@ -1,11 +1,11 @@
 ---
 name: implement-feature
-description: Implements an approved plan on a new feature branch using the developer agent. Use after /plan-feature has an approved plan.
+description: Implements an approved plan on a new feature branch using the developer agent, then writes the tests with the test-writer agent. Use after /plan-feature has an approved plan.
 argument-hint: <issue number or path to a plan file>
 disable-model-invocation: true
 ---
 
-Implement an approved plan.
+Implement an approved plan, with tests.
 
 The plan is: $ARGUMENTS
 
@@ -18,12 +18,13 @@ The plan is: $ARGUMENTS
 5. Run `git status --short`. If there are uncommitted changes outside `docs/`, stop and ask the user what to do. Uncommitted files in `docs/` (the issue and the plan) are fine, they come along to the new branch.
 6. Create the branch from `main` with `git switch main` then `git switch -c <branch>`. If the branch already exists, stop and ask.
 7. Commit the issue and plan files first: `docs: add issue and plan (#<number>)`.
-8. Use the `developer` agent with the plan path.
-9. Show the user: the commits (`git log main..HEAD --oneline`), the changed files (`git diff main --stat`), and anything the developer skipped or is blocked on.
-10. Tell the user to review the changes, and that tests and the pull request come next. Do not push.
+8. Use the `developer` agent with the plan path. If it reports that it is blocked, show the user the reason and stop.
+9. Use the `test-writer` agent with the plan path. If it reports a bug in the application code, show the user and stop. Do not fix it yourself.
+10. Show the user: the commits (`git log main..HEAD --oneline`), the changed files (`git diff main --stat`), the `dotnet test` result, and anything skipped or blocked.
+11. Tell the user to review the changes, and that the pull request and the reviews come next. Do not push.
 
 ## Rules
 
 - Never implement a plan that is not Approved.
 - Never push and never open a PR in this workflow.
-- Do not write code yourself. All code comes from the `developer` agent.
+- Do not write code or tests yourself. Code comes from the `developer` agent and tests from the `test-writer` agent.
