@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using PawsPost.Data;
 using PawsPost.Features.Auth;
 using PawsPost.Tests.Infrastructure;
 
@@ -26,6 +28,28 @@ public class MeTests
         var me = await response.Content.ReadFromJsonAsync<UserResponse>();
         Assert.Equal(registeredUser?.Id, me?.Id);
         Assert.Equal("a@x.com", me?.Email);
+    }
+
+    [Fact]
+    public async Task Me_ValidCookieButUserDeleted_Returns401()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = factory.CreateApiClient();
+        await client.RegisterAsync("a@x.com");
+        await client.LoginAsync("a@x.com");
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Users.RemoveRange(db.Users);
+            await db.SaveChangesAsync();
+        }
+
+        // Act
+        var response = await client.GetAsync("/api/auth/me");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]

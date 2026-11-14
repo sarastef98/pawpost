@@ -114,6 +114,8 @@ public class RegisterTests
     [InlineData(null, ValidPassword)]
     [InlineData("", ValidPassword)]
     [InlineData("not-an-email", ValidPassword)]
+    [InlineData("   ", ValidPassword)]
+    [InlineData("Name <a@x.com>", ValidPassword)]
     [InlineData("a@x.com", null)]
     [InlineData("a@x.com", "Abcde1!")]
     [InlineData("a@x.com", "passw0rd!")]
@@ -162,6 +164,25 @@ public class RegisterTests
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Register_EmailWithSurroundingWhitespace_TrimsAndReturns201()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = factory.CreateApiClient();
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/auth/register", new { email = "  a@x.com  ", password = ValidPassword });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<UserResponse>();
+        Assert.Equal("a@x.com", body?.Email);
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.Equal("a@x.com", db.Users.Single().Email);
     }
 
     [Fact]
