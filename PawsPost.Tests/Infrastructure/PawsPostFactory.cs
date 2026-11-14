@@ -33,19 +33,6 @@ public class PawsPostFactory : WebApplicationFactory<Program>
     }
 
 
-    /// <summary>
-    /// Creates a client with an https base address (the auth cookie is Secure) and no automatic redirects.
-    /// </summary>
-    public HttpClient CreateApiClient()
-    {
-        return CreateClient(new WebApplicationFactoryClientOptions
-        {
-            BaseAddress = new Uri("https://localhost"),
-            AllowAutoRedirect = false,
-            HandleCookies = true
-        });
-    }
-
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);

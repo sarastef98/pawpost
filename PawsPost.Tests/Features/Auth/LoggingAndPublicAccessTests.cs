@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Net;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Logging;
 using PawsPost.Tests.Infrastructure;
 
@@ -19,11 +18,7 @@ public class LoggingAndPublicAccessTests
         using var factory = new PawsPostFactory();
         using var loggedFactory = factory.WithWebHostBuilder(builder =>
             builder.ConfigureLogging(logging => logging.AddProvider(provider)));
-        var client = loggedFactory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            BaseAddress = new Uri("https://localhost"),
-            AllowAutoRedirect = false
-        });
+        var client = loggedFactory.CreateApiClient();
 
         // Act
         await client.RegisterAsync(email, password);
