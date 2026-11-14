@@ -3,7 +3,7 @@ using PawsPost.Data;
 
 namespace PawsPost.Features.Auth;
 
-public class AccountService(UserManager<User> userManager) : IAccountService
+public class AccountService(UserManager<User> userManager, SignInManager<User> signInManager) : IAccountService
 {
     public async Task<RegisterResult> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
     {
@@ -33,6 +33,23 @@ public class AccountService(UserManager<User> userManager) : IAccountService
         }
 
         return RegisterResult.ValidationFailed(MapErrors(result.Errors));
+    }
+
+    public async Task<UserResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var user = await userManager.FindByEmailAsync(request.Email.Trim());
+        if (user is null)
+        {
+            return null;
+        }
+
+        // lockoutOnFailure counts failed attempts. Unknown email, wrong password and lockout all give null,
+        // so the response never reveals anything about the account.
+        var result = await signInManager.PasswordSignInAsync(user, request.Password, isPersistent: false, lockoutOnFailure: true);
+
+        return result.Succeeded ? new UserResponse(user.Id, user.Email!) : null;
     }
 
     private static Dictionary<string, string[]> MapErrors(IEnumerable<IdentityError> errors)

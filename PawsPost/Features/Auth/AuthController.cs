@@ -25,4 +25,17 @@ public class AuthController(IAccountService accountService) : ControllerBase
                 result.Errors!.ToDictionary(pair => pair.Key, pair => pair.Value)))
         };
     }
+
+    [HttpPost("login")]
+    [ProducesResponseType<UserResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
+    {
+        var user = await accountService.LoginAsync(request, cancellationToken);
+
+        return user is null
+            ? Problem(title: "Invalid credentials", statusCode: StatusCodes.Status401Unauthorized)
+            : Ok(user);
+    }
 }
