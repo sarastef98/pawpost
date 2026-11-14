@@ -51,6 +51,29 @@ describe('TextField', () => {
     expect(screen.getByText('Email is required')).toBeInTheDocument()
   })
 
+  it('keeps the label linked when a caller passes its own id', () => {
+    render(<TextField label="Email" id="custom-id" />)
+
+    expect(screen.getByLabelText('Email')).toBeInTheDocument()
+  })
+
+  it('keeps the helper text linked when a caller passes its own aria-describedby', () => {
+    render(
+      <>
+        <p id="extra-hint">Use your work address</p>
+        <TextField
+          label="Email"
+          helperText="We never share it"
+          aria-describedby="extra-hint"
+        />
+      </>,
+    )
+
+    expect(screen.getByLabelText('Email')).toHaveAccessibleDescription(
+      'Use your work address We never share it',
+    )
+  })
+
   it('can be focused with the keyboard', async () => {
     render(<TextField label="Email" />)
 
