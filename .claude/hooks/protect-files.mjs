@@ -1,0 +1,39 @@
+import { execSync } from 'node:child_process';
+import path from 'node:path';
+
+let data = '';
+for await (const chunk of process.stdin) data += chunk;
+const input = JSON.parse(data);
+
+const filePath = input.tool_input?.file_path;
+if (!filePath) process.exit(0);
+
+const projectDir = process.env.CLAUDE_PROJECT_DIR ?? input.cwd ?? process.cwd();
+const rel = path.relative(projectDir, path.resolve(projectDir, filePath)).replaceAll('\\', '/');
+
+function block(reason) {
+  console.error(`Blocked by hook: ${reason}`);
+  process.exit(2);
+}
+
+if (/(^|\/)\.env(\.|$)/.test(rel)) block('.env files hold secrets and must not be edited.');
+if (rel.startsWith('secrets/')) block('the secrets folder must not be edited.');
+if (rel.startsWith('.git/')) block('the .git folder must not be edited.');
+if (rel.startsWith('.claude/hooks/') || rel === '.claude/settings.json') {
+  block('hooks and settings guard the project. Ask the user to change them.');
+}
+
+if (/Data\/Migrations\//.test(rel)) {
+  let existsOnMain = false;
+  try {
+    execSync(`git cat-file -e main:${rel}`, { cwd: projectDir, stdio: 'ignore' });
+    existsOnMain = true;
+  } catch {
+    existsOnMain = false;
+  }
+  if (existsOnMain) {
+    block('this migration is already in main. Never edit it, add a new migration instead.');
+  }
+}
+
+process.exit(0);
