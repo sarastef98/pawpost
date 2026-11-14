@@ -9,4 +9,6 @@ public interface IAccountService
 
     /// <summary>Returns the account with this id, or null if it no longer exists.</summary>
     Task<UserResponse?> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken);
+
+    Task LogoutAsync(CancellationToken cancellationToken);
 }

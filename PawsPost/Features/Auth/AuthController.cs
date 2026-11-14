@@ -53,4 +53,15 @@ public class AuthController(IAccountService accountService) : ControllerBase
             ? Problem(title: "Authentication required", statusCode: StatusCodes.Status401Unauthorized)
             : Ok(user);
     }
+
+    [Authorize]
+    [HttpPost("logout")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> LogoutAsync(CancellationToken cancellationToken)
+    {
+        await accountService.LogoutAsync(cancellationToken);
+
+        return NoContent();
+    }
 }

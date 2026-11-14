@@ -61,6 +61,13 @@ public class AccountService(UserManager<User> userManager, SignInManager<User> s
         return user is null ? null : new UserResponse(user.Id, user.Email!);
     }
 
+    public async Task LogoutAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await signInManager.SignOutAsync();
+    }
+
     private static Dictionary<string, string[]> MapErrors(IEnumerable<IdentityError> errors)
     {
         // Identity messages describe the rule that failed and never contain the password.
