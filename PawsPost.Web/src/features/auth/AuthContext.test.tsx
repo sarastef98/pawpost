@@ -18,6 +18,7 @@ import {
 } from '../../test/apiResponses'
 import { AuthProvider } from './AuthContext'
 import { useAuth } from './useAuth'
+import type { ActionResult } from './useAuth'
 
 vi.mock('../../api/client', () => ({
   client: { GET: vi.fn(), POST: vi.fn() },
@@ -337,18 +338,20 @@ describe('AuthProvider late results', () => {
     const { result } = renderAuth()
     await waitFor(() => expect(result.current.status).toBe('loggedIn'))
 
-    let loginDone: Promise<unknown> = Promise.resolve()
+    let loginDone: Promise<ActionResult> = Promise.resolve({ ok: true })
     act(() => {
       loginDone = result.current.login('sara@example.com', 'Secret1!')
     })
     await act(async () => {
       await result.current.logout()
     })
+    let loginResult: ActionResult = { ok: true }
     await act(async () => {
       loginResponse.resolve(okResult(testUser))
-      await loginDone
+      loginResult = await loginDone
     })
 
+    expect(loginResult).toEqual({ ok: false, errors: {} })
     expect(result.current.status).toBe('loggedOut')
     expect(result.current.user).toBeNull()
   })

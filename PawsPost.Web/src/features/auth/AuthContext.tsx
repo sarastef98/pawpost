@@ -55,11 +55,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
         if (data) {
           // A logout that finished while this login ran is newer and wins.
-          if (version.current === startVersion) {
-            version.current += 1
-            setUser(data)
-            setStatus('loggedIn')
+          // The caller then gets no success and no error message, so the
+          // page stays on the form without redirecting.
+          if (version.current !== startVersion) {
+            return { ok: false, errors: {} }
           }
+          version.current += 1
+          setUser(data)
+          setStatus('loggedIn')
           return { ok: true }
         }
         return {

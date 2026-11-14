@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
 import App from '../../App'
@@ -8,10 +8,13 @@ import { client } from '../../api/client'
 import {
   deferred,
   failResult,
+  noContentResult,
   okResult,
   testUser,
 } from '../../test/apiResponses'
 import { AuthProvider } from './AuthContext'
+import LoginPage from './LoginPage'
+import { useAuth } from './useAuth'
 
 vi.mock('../../api/client', () => ({
   client: { GET: vi.fn(), POST: vi.fn() },
@@ -398,5 +401,60 @@ describe('LoginPage focus after a failed submit', () => {
 
     const alert = await screen.findByRole('alert')
     expect(document.activeElement).toContainElement(alert)
+  })
+})
+
+describe('LoginPage when a logout wins over the login', () => {
+  // Logs out without navigating, so only LoginPage can change the route.
+  function LogoutProbe() {
+    const { logout } = useAuth()
+    return (
+      <button type="button" onClick={() => void logout()}>
+        Probe log out
+      </button>
+    )
+  }
+
+  it('stays on the form without an error when a logout finishes during the login', async () => {
+    const user = userEvent.setup()
+    const loginResponse = deferred<unknown>()
+    post.mockImplementation((path: string) =>
+      path === '/api/auth/login'
+        ? loginResponse.promise
+        : Promise.resolve(noContentResult()),
+    )
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <AuthProvider>
+          <Routes>
+            <Route
+              path="/login"
+              element={
+                <>
+                  <LoginPage />
+                  <LogoutProbe />
+                </>
+              }
+            />
+            <Route path="/" element={<p>Home page</p>} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    )
+
+    await fillAndSubmit(user)
+    await user.click(screen.getByRole('button', { name: 'Probe log out' }))
+    expect(post).toHaveBeenCalledWith('/api/auth/logout')
+    loginResponse.resolve(okResult(testUser))
+
+    expect(
+      await screen.findByRole('button', { name: 'Log in' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Home page')).toBeNull()
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Log in' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByLabelText('Email')).toHaveValue('sara@example.com')
   })
 })
