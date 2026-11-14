@@ -150,7 +150,6 @@ export default function PetAdList() {
         Latest ads
       </h2>
       <PetAdFilters
-        key={JSON.stringify([type, species])}
         type={type}
         species={species}
         onApply={applyFilters}

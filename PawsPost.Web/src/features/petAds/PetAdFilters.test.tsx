@@ -21,6 +21,29 @@ describe('PetAdFilters', () => {
     expect(screen.getByLabelText('Species')).toHaveValue('Dog')
   })
 
+  it('sets the fields to the new filters when the given filters change', async () => {
+    const { rerender } = render(
+      <PetAdFilters type="" species="" onApply={vi.fn()} />,
+    )
+    await userEvent.type(screen.getByLabelText('Species'), 'Typed')
+
+    rerender(<PetAdFilters type="Adoption" species="Cat" onApply={vi.fn()} />)
+
+    expect(screen.getByLabelText('Type')).toHaveValue('Adoption')
+    expect(screen.getByLabelText('Species')).toHaveValue('Cat')
+  })
+
+  it('keeps the typed text when it is rendered again with the same filters', async () => {
+    const { rerender } = render(
+      <PetAdFilters type="" species="" onApply={vi.fn()} />,
+    )
+    await userEvent.type(screen.getByLabelText('Species'), 'Typed')
+
+    rerender(<PetAdFilters type="" species="" onApply={vi.fn()} />)
+
+    expect(screen.getByLabelText('Species')).toHaveValue('Typed')
+  })
+
   it('does not apply anything until the Apply button is pressed', async () => {
     const onApply = vi.fn()
     render(<PetAdFilters type="" species="" onApply={onApply} />)

@@ -23,8 +23,9 @@ function toTypeFilter(value: string): AdTypeFilter {
   return value === 'Adoption' || value === 'Sale' ? value : ''
 }
 
-// The caller keys this form by the current URL filters, so the inputs start
-// from the URL values again after Back or Clear filters.
+// The form stays mounted, so the focused field keeps focus after Apply. When
+// the URL filters change (Apply, Back or Forward, Clear filters) the inputs
+// are set to the new URL values during render, without remounting the form.
 export default function PetAdFilters({
   type,
   species,
@@ -33,6 +34,13 @@ export default function PetAdFilters({
 }: PetAdFiltersProps) {
   const [typeValue, setTypeValue] = useState<AdTypeFilter>(type)
   const [speciesValue, setSpeciesValue] = useState(species)
+  const [synced, setSynced] = useState({ type, species })
+
+  if (synced.type !== type || synced.species !== species) {
+    setSynced({ type, species })
+    setTypeValue(type)
+    setSpeciesValue(species)
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()

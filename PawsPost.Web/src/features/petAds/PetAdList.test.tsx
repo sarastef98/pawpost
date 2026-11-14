@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, useLocation } from 'react-router-dom'
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
 import { client } from '../../api/client'
@@ -36,7 +36,15 @@ function listBody(items: Item[], totalCount = items.length, page = 1) {
 
 function UrlDisplay() {
   const location = useLocation()
-  return <p>URL: {location.pathname + location.search}</p>
+  const navigate = useNavigate()
+  return (
+    <>
+      <p>URL: {location.pathname + location.search}</p>
+      <button type="button" onClick={() => void navigate(-1)}>
+        Browser back
+      </button>
+    </>
+  )
 }
 
 function renderList(url = '/') {
@@ -266,6 +274,52 @@ describe('PetAdList', () => {
 
       await waitFor(() => expect(lastQuery().page).toBe(1))
       expect(screen.getByText('URL: /?species=Dog')).toBeInTheDocument()
+    })
+
+    it('keeps focus in the Species field after applying with Enter', async () => {
+      get.mockResolvedValue(okResult(listBody([ad()])))
+      renderList()
+      await screen.findByText('Friendly Rex')
+      const speciesField = screen.getByLabelText('Species')
+
+      await userEvent.type(speciesField, 'Dog{Enter}')
+
+      await waitFor(() => expect(lastQuery().species).toBe('Dog'))
+      await screen.findByText('Friendly Rex')
+      expect(document.activeElement).not.toBe(document.body)
+      expect(document.activeElement).toBe(speciesField)
+      expect(speciesField).toHaveValue('Dog')
+    })
+
+    it('keeps focus on the Apply filters button after it is pressed', async () => {
+      get.mockResolvedValue(okResult(listBody([ad()])))
+      renderList()
+      await screen.findByText('Friendly Rex')
+      await userEvent.type(screen.getByLabelText('Species'), 'Dog')
+      const applyButton = screen.getByRole('button', { name: 'Apply filters' })
+
+      await userEvent.click(applyButton)
+
+      await waitFor(() => expect(lastQuery().species).toBe('Dog'))
+      await screen.findByText('Friendly Rex')
+      expect(document.activeElement).toBe(applyButton)
+    })
+
+    it('fills the filter fields from the URL again after going back', async () => {
+      get.mockResolvedValue(okResult(listBody([ad()])))
+      renderList('/?type=Sale')
+      await screen.findByText('Friendly Rex')
+      await userEvent.selectOptions(screen.getByLabelText('Type'), 'Adoption')
+      await userEvent.type(screen.getByLabelText('Species'), 'Dog{Enter}')
+      await screen.findByText('URL: /?type=Adoption&species=Dog')
+
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Browser back' }),
+      )
+
+      expect(await screen.findByText('URL: /?type=Sale')).toBeInTheDocument()
+      expect(screen.getByLabelText('Type')).toHaveValue('Sale')
+      expect(screen.getByLabelText('Species')).toHaveValue('')
     })
   })
 
