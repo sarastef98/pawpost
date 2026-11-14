@@ -28,3 +28,4 @@ The issue is: $ARGUMENTS
 - Never write application code in this workflow.
 - Never mark a plan Approved without a clear yes.
 - Do not rewrite the plan yourself. Changes go through the `planner` agent.
+- If the plan has open questions that block implementation, or depends on something that does not exist yet, do not ask for approval. List the questions and the missing dependency, and ask the user how to proceed.
