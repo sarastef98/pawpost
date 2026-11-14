@@ -77,9 +77,26 @@ public class AccountService(UserManager<User> userManager, SignInManager<User> s
     {
         // Identity messages describe the rule that failed and never contain the password.
         return errors
-            .GroupBy(error => error.Code.StartsWith("Password", StringComparison.Ordinal)
-                ? "Password"
-                : error.Code.Contains("Email", StringComparison.Ordinal) ? "Email" : string.Empty)
+            .GroupBy(error => FieldFor(error.Code))
             .ToDictionary(group => group.Key, group => group.Select(error => error.Description).ToArray());
     }
+
+    // Explicit list of the Identity error codes that belong to a request field. The email is also the user name,
+    // so user-name errors go to Email. Any other code is not about one field, so it uses the empty key,
+    // which is the standard ModelState key for errors about the request as a whole.
+    private static string FieldFor(string code) => code switch
+    {
+        nameof(IdentityErrorDescriber.PasswordTooShort)
+            or nameof(IdentityErrorDescriber.PasswordRequiresNonAlphanumeric)
+            or nameof(IdentityErrorDescriber.PasswordRequiresDigit)
+            or nameof(IdentityErrorDescriber.PasswordRequiresLower)
+            or nameof(IdentityErrorDescriber.PasswordRequiresUpper)
+            or nameof(IdentityErrorDescriber.PasswordRequiresUniqueChars)
+            or nameof(IdentityErrorDescriber.PasswordMismatch) => nameof(RegisterRequest.Password),
+        nameof(IdentityErrorDescriber.InvalidEmail)
+            or nameof(IdentityErrorDescriber.DuplicateEmail)
+            or nameof(IdentityErrorDescriber.InvalidUserName)
+            or nameof(IdentityErrorDescriber.DuplicateUserName) => nameof(RegisterRequest.Email),
+        _ => string.Empty
+    };
 }

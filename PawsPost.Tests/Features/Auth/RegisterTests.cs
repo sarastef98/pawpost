@@ -136,6 +136,26 @@ public class RegisterTests
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
     }
 
+    [Theory]
+    [InlineData("passw0rd!")]
+    [InlineData("PASSW0RD!")]
+    [InlineData("Password!")]
+    [InlineData("Passw0rd1")]
+    public async Task Register_PasswordFailsIdentityRule_ReturnsErrorUnderPasswordField(string password)
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = factory.CreateApiClient();
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/auth/register", new { email = "a@x.com", password });
+
+        // Assert
+        var body = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ValidationProblemDetails>();
+        Assert.NotNull(body);
+        Assert.Equal([nameof(RegisterRequest.Password)], body.Errors.Keys);
+    }
+
     [Fact]
     public async Task Register_EmailTooLong_Returns400()
     {
