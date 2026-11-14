@@ -36,6 +36,8 @@ builder.Services
     .AddEntityFrameworkStores<AppDbContext>()
     .AddSignInManager();
 
+builder.Services.AddScoped<IAccountService, AccountService>();
+
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.Name = "pawspost.auth";
