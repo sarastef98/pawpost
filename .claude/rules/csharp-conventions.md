@@ -13,3 +13,4 @@ paths:
 - Naming: `PascalCase` for public members, `_camelCase` for private fields, `I` prefix for interfaces.
 - Validate input and return `ProblemDetails` for errors, with proper status codes (400, 404, 409).
 - No secrets or connection strings in code. Use configuration.
+- Code is organized by feature under `PawsPost/Features/<Feature>/`: controller, service, interface, DTOs and validator together.
