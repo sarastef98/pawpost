@@ -6,6 +6,7 @@ namespace PawsPost.Features.PetAds;
 // Never add owner email, phone or other user data here.
 public record PetAdResponse(
     Guid Id,
+    string Title,
     [property: JsonConverter(typeof(JsonStringEnumConverter<PetAdType>))] PetAdType Type,
     string Species,
     string? Breed,

@@ -16,6 +16,7 @@ public static class PetAdTestHelpers
     {
         var body = new Dictionary<string, object?>
         {
+            ["title"] = "Friendly beagle looking for a home",
             ["type"] = "Adoption",
             ["species"] = "Dog",
             ["breed"] = "Beagle",
