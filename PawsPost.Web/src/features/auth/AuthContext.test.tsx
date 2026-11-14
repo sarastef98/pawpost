@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
 import { client } from '../../api/client'
 import {
+  deferred,
   failResult,
   noContentResult,
   okResult,
@@ -269,6 +270,108 @@ describe('AuthProvider logout', () => {
 
     expect(outcome).toEqual({ ok: false })
     expect(result.current.status).toBe('loggedIn')
+  })
+})
+
+describe('AuthProvider late results', () => {
+  it('stays logged in when a slow /me 401 arrives after a login', async () => {
+    const me = deferred<unknown>()
+    get.mockReturnValue(me.promise)
+    post.mockResolvedValue(okResult(testUser))
+    const { result } = renderAuth()
+
+    await act(async () => {
+      await result.current.login('sara@example.com', 'Secret1!')
+    })
+    await act(async () => {
+      me.resolve(failResult(401))
+    })
+
+    expect(result.current.status).toBe('loggedIn')
+    expect(result.current.user).toEqual(testUser)
+  })
+
+  it('stays logged out when a slow /me 200 arrives after a logout', async () => {
+    const me = deferred<unknown>()
+    get.mockReturnValue(me.promise)
+    post.mockResolvedValue(noContentResult())
+    const { result } = renderAuth()
+
+    await act(async () => {
+      await result.current.logout()
+    })
+    await act(async () => {
+      me.resolve(okResult(testUser))
+    })
+
+    expect(result.current.status).toBe('loggedOut')
+    expect(result.current.user).toBeNull()
+  })
+
+  it('still applies a slow /me result after a failed login', async () => {
+    const me = deferred<unknown>()
+    get.mockReturnValue(me.promise)
+    post.mockResolvedValue(failResult(401))
+    const { result } = renderAuth()
+
+    await act(async () => {
+      await result.current.login('a@b.c', 'x')
+    })
+    await act(async () => {
+      me.resolve(okResult(testUser))
+    })
+
+    expect(result.current.status).toBe('loggedIn')
+    expect(result.current.user).toEqual(testUser)
+  })
+
+  it('stays logged out when a login resolves after a logout', async () => {
+    get.mockResolvedValue(okResult(testUser))
+    const loginResponse = deferred<unknown>()
+    post.mockImplementation((path: string) =>
+      path === '/api/auth/login'
+        ? loginResponse.promise
+        : Promise.resolve(noContentResult()),
+    )
+    const { result } = renderAuth()
+    await waitFor(() => expect(result.current.status).toBe('loggedIn'))
+
+    let loginDone: Promise<unknown> = Promise.resolve()
+    act(() => {
+      loginDone = result.current.login('sara@example.com', 'Secret1!')
+    })
+    await act(async () => {
+      await result.current.logout()
+    })
+    await act(async () => {
+      loginResponse.resolve(okResult(testUser))
+      await loginDone
+    })
+
+    expect(result.current.status).toBe('loggedOut')
+    expect(result.current.user).toBeNull()
+  })
+
+  it('ignores the /me result of the first StrictMode mount', async () => {
+    const first = deferred<unknown>()
+    const second = deferred<unknown>()
+    get.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
+    const { result } = renderHook(() => useAuth(), {
+      wrapper,
+      reactStrictMode: true,
+    })
+    // StrictMode mounts, unmounts and mounts again, so the check runs twice.
+    expect(get).toHaveBeenCalledTimes(2)
+
+    await act(async () => {
+      second.resolve(failResult(401))
+    })
+    await act(async () => {
+      first.resolve(okResult(testUser))
+    })
+
+    expect(result.current.status).toBe('loggedOut')
+    expect(result.current.user).toBeNull()
   })
 })
 
