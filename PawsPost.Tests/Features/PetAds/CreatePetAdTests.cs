@@ -42,6 +42,30 @@ public class CreatePetAdTests
     }
 
     [Fact]
+    public async Task CreatePetAd_Success_ReturnsLocationHeaderOfTheDetailsEndpoint()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("a@x.com");
+
+        // Act
+        var response = await client.PostPetAdAsync(PetAdTestHelpers.ValidAdoptionBody());
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var ad = await response.Content.ReadFromJsonAsync<PetAdResponse>();
+        Assert.NotNull(ad);
+        Assert.NotEqual(Guid.Empty, ad.OwnerId);
+        var location = response.Headers.Location;
+        Assert.NotNull(location);
+        Assert.Equal($"/api/pet-ads/{ad.Id}", location.AbsolutePath);
+        var detailsResponse = await client.GetAsync(location);
+        Assert.Equal(HttpStatusCode.OK, detailsResponse.StatusCode);
+        using var json = JsonDocument.Parse(await detailsResponse.Content.ReadAsStringAsync());
+        Assert.Equal(ad.Id, json.RootElement.GetProperty("id").GetGuid());
+    }
+
+    [Fact]
     public async Task CreatePetAd_ValidRequest_ReturnsAndStoresTitle()
     {
         // Arrange

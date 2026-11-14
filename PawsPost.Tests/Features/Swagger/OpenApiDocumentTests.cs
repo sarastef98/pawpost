@@ -136,6 +136,65 @@ public class OpenApiDocumentTests(PawsPostFactory factory) : IClassFixture<PawsP
         Assert.DoesNotContain("ownerId", names);
     }
 
+    [Fact]
+    public async Task GetOpenApiDocument_PetAdsIdGet_HasRequiredIdPathParameter()
+    {
+        // Arrange
+        using var document = await GetOpenApiDocumentAsync();
+
+        // Act
+        var parameters = GetPetAdsIdGet(document).GetProperty("parameters").EnumerateArray().ToList();
+
+        // Assert
+        var parameter = Assert.Single(parameters);
+        Assert.Equal("id", parameter.GetProperty("name").GetString());
+        Assert.Equal("path", parameter.GetProperty("in").GetString());
+        Assert.True(parameter.GetProperty("required").GetBoolean());
+        Assert.Equal("uuid", parameter.GetProperty("schema").GetProperty("format").GetString());
+    }
+
+    [Fact]
+    public async Task GetOpenApiDocument_PetAdsIdGet_ResponseReferencesPetAdDetailsResponse()
+    {
+        // Arrange
+        using var document = await GetOpenApiDocumentAsync();
+
+        // Act
+        var responses = GetPetAdsIdGet(document).GetProperty("responses");
+        var ok = responses.GetProperty("200").GetProperty("content").GetProperty("application/json").GetProperty("schema");
+
+        // Assert
+        Assert.Equal("#/components/schemas/PetAdDetailsResponse", ok.GetProperty("$ref").GetString());
+        Assert.True(responses.TryGetProperty("400", out _));
+        Assert.True(responses.TryGetProperty("401", out _));
+        Assert.True(responses.TryGetProperty("404", out _));
+    }
+
+    [Fact]
+    public async Task GetOpenApiDocument_PetAdDetailsResponseSchema_HasExpectedFieldsAndNoOwnerId()
+    {
+        // Arrange
+        using var document = await GetOpenApiDocumentAsync();
+
+        // Act
+        var schema = GetSchema(document, "PetAdDetailsResponse");
+
+        // Assert
+        var names = schema.GetProperty("properties").EnumerateObject().Select(p => p.Name).Order().ToList();
+        Assert.Equal(
+            ["ageInMonths", "breed", "createdAt", "description", "id", "location", "price", "species", "status", "title", "type"],
+            names);
+        Assert.DoesNotContain("ownerId", names);
+        var required = GetRequiredNames(schema);
+        foreach (var name in new[] { "id", "title", "type", "species", "ageInMonths", "description", "status", "createdAt" })
+        {
+            Assert.Contains(name, required);
+        }
+    }
+
+    private static JsonElement GetPetAdsIdGet(JsonDocument document) =>
+        document.RootElement.GetProperty("paths").GetProperty("/api/pet-ads/{id}").GetProperty("get");
+
     private static JsonElement GetPetAdsGet(JsonDocument document) =>
         document.RootElement.GetProperty("paths").GetProperty("/api/pet-ads").GetProperty("get");
 
