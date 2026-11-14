@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using PawsPost.Data;
 using PawsPost.Features.Auth;
 
@@ -18,7 +19,13 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' was not found.");
 builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite(connectionString));
 
-var authOptions = builder.Configuration.GetSection(AuthOptions.SectionName).Get<AuthOptions>() ?? new AuthOptions();
+// Bound through the options system and checked at startup, so a bad value stops the app instead of
+// silently producing cookies that expire immediately.
+builder.Services
+    .AddOptions<AuthOptions>()
+    .Bind(builder.Configuration.GetSection(AuthOptions.SectionName))
+    .Validate(options => options.CookieLifetime > TimeSpan.Zero, "Auth:CookieLifetime must be greater than zero.")
+    .ValidateOnStart();
 
 builder.Services
     .AddAuthentication(IdentityConstants.ApplicationScheme)
@@ -44,7 +51,6 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     options.Cookie.SameSite = SameSiteMode.Lax;
-    options.ExpireTimeSpan = authOptions.CookieLifetime;
     options.SlidingExpiration = true;
 
     // An API must answer 401/403 with ProblemDetails, never redirect to a login page.
@@ -53,6 +59,12 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Events.OnRedirectToAccessDenied = context => WriteProblemAsync(
         context.HttpContext, StatusCodes.Status403Forbidden, "Access denied");
 });
+
+// The cookie lifetime comes from the validated AuthOptions.
+builder.Services
+    .AddOptions<CookieAuthenticationOptions>(IdentityConstants.ApplicationScheme)
+    .Configure<IOptions<AuthOptions>>((options, authOptions) =>
+        options.ExpireTimeSpan = authOptions.Value.CookieLifetime);
 
 var app = builder.Build();
 
