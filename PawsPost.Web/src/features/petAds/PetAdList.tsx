@@ -67,6 +67,13 @@ export default function PetAdList() {
     )
   }
 
+  // The Try again button is replaced by the spinner, so focus goes to the
+  // heading once the results settle, also when the error shows again.
+  function retryLoad() {
+    pendingFocus.current = 'heading'
+    retry()
+  }
+
   function clearFilters() {
     pendingFocus.current = 'type'
     setSearchParams(new URLSearchParams())
@@ -82,7 +89,7 @@ export default function PetAdList() {
       return (
         <ErrorMessage
           message="We could not load the ads. Please try again."
-          onRetry={retry}
+          onRetry={retryLoad}
         />
       )
     }

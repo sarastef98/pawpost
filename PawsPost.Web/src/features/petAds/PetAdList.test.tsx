@@ -518,6 +518,39 @@ describe('PetAdList', () => {
       expect(get).toHaveBeenCalledTimes(2)
     })
 
+    it('moves focus to the Latest ads heading after Try again loads the ads', async () => {
+      get.mockResolvedValueOnce(failResult(500))
+      get.mockResolvedValueOnce(okResult(listBody([ad()])))
+      renderList()
+
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Try again' }),
+      )
+
+      expect(await screen.findByText('Friendly Rex')).toBeInTheDocument()
+      expect(document.activeElement).not.toBe(document.body)
+      expect(
+        screen.getByRole('heading', { level: 2, name: 'Latest ads' }),
+      ).toHaveFocus()
+    })
+
+    it('moves focus to the Latest ads heading when Try again fails again', async () => {
+      get.mockResolvedValueOnce(failResult(500))
+      get.mockResolvedValueOnce(failResult(500))
+      renderList()
+
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Try again' }),
+      )
+
+      await waitFor(() => expect(get).toHaveBeenCalledTimes(2))
+      expect(await screen.findByRole('alert')).toHaveTextContent(ERROR_TEXT)
+      expect(document.activeElement).not.toBe(document.body)
+      expect(
+        screen.getByRole('heading', { level: 2, name: 'Latest ads' }),
+      ).toHaveFocus()
+    })
+
     it('ignores a slow response of an older request that arrives after a newer one', async () => {
       const slow = deferred<ReturnType<typeof okResult>>()
       get.mockReturnValueOnce(slow.promise)
