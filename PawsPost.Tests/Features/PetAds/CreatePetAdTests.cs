@@ -41,6 +41,76 @@ public class CreatePetAdTests
     }
 
     [Fact]
+    public async Task CreatePetAd_ValidRequest_ReturnsAndStoresTitle()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("a@x.com");
+
+        // Act
+        var response = await client.PostPetAdAsync(PetAdTestHelpers.ValidAdoptionBody(("title", "Sweet cat needs a home")));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var ad = await response.Content.ReadFromJsonAsync<PetAdResponse>();
+        Assert.Equal("Sweet cat needs a home", ad?.Title);
+        var stored = Assert.Single(await factory.GetStoredAdsAsync());
+        Assert.Equal("Sweet cat needs a home", stored.Title);
+    }
+
+    [Fact]
+    public async Task CreatePetAd_TitleWithSurroundingSpaces_IsTrimmed()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("a@x.com");
+
+        // Act
+        var response = await client.PostPetAdAsync(PetAdTestHelpers.ValidAdoptionBody(("title", "  Nice dog  ")));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var ad = await response.Content.ReadFromJsonAsync<PetAdResponse>();
+        Assert.Equal("Nice dog", ad?.Title);
+        var stored = Assert.Single(await factory.GetStoredAdsAsync());
+        Assert.Equal("Nice dog", stored.Title);
+    }
+
+    [Fact]
+    public async Task CreatePetAd_TitleAtMaxLengthPaddedWithSpaces_Returns201()
+    {
+        // Arrange (length is checked on the trimmed text)
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("a@x.com");
+        var body = PetAdTestHelpers.ValidAdoptionBody(("title", "  " + new string('a', 100) + "  "));
+
+        // Act
+        var response = await client.PostPetAdAsync(body);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var stored = Assert.Single(await factory.GetStoredAdsAsync());
+        Assert.Equal(new string('a', 100), stored.Title);
+    }
+
+    [Fact]
+    public async Task CreatePetAd_Success_ResponseJsonContainsTitle()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("a@x.com");
+
+        // Act
+        var response = await client.PostPetAdAsync(PetAdTestHelpers.ValidAdoptionBody());
+
+        // Assert
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var title = json.GetProperty("title");
+        Assert.Equal(JsonValueKind.String, title.ValueKind);
+        Assert.Equal("Friendly beagle looking for a home", title.GetString());
+    }
+
+    [Fact]
     public async Task CreatePetAd_ValidSale_Returns201WithPrice()
     {
         // Arrange
@@ -222,6 +292,7 @@ public class CreatePetAdTests
     }
 
     [Theory]
+    [InlineData("title", 100)]
     [InlineData("species", 50)]
     [InlineData("breed", 100)]
     [InlineData("description", 2000)]
@@ -297,6 +368,7 @@ public class CreatePetAdTests
     // ---- Validation ----
 
     [Theory]
+    [InlineData("title")]
     [InlineData("species")]
     [InlineData("ageInMonths")]
     [InlineData("description")]
@@ -317,6 +389,7 @@ public class CreatePetAdTests
     }
 
     [Theory]
+    [InlineData("title")]
     [InlineData("species")]
     [InlineData("description")]
     public async Task CreatePetAd_WhitespaceOnlyText_Returns400WithOnlyThatField(string field)
@@ -331,6 +404,36 @@ public class CreatePetAdTests
 
         // Assert
         await AssertBadRequestForOnlyAsync(response, field);
+        Assert.Empty(await factory.GetStoredAdsAsync());
+    }
+
+    [Fact]
+    public async Task CreatePetAd_TitleNull_Returns400WithOnlyThatField()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("a@x.com");
+
+        // Act
+        var response = await client.PostPetAdAsync(PetAdTestHelpers.ValidAdoptionBody(("title", null)));
+
+        // Assert
+        await AssertBadRequestForOnlyAsync(response, "title");
+        Assert.Empty(await factory.GetStoredAdsAsync());
+    }
+
+    [Fact]
+    public async Task CreatePetAd_TitleEmpty_Returns400WithOnlyThatField()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("a@x.com");
+
+        // Act
+        var response = await client.PostPetAdAsync(PetAdTestHelpers.ValidAdoptionBody(("title", "")));
+
+        // Assert
+        await AssertBadRequestForOnlyAsync(response, "title");
         Assert.Empty(await factory.GetStoredAdsAsync());
     }
 
@@ -461,6 +564,7 @@ public class CreatePetAdTests
     }
 
     [Theory]
+    [InlineData("title", 100)]
     [InlineData("species", 50)]
     [InlineData("breed", 100)]
     [InlineData("description", 2000)]

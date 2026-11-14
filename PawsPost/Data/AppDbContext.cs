@@ -16,6 +16,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityUser
             ad.HasKey(petAd => petAd.Id);
             ad.Property(petAd => petAd.Type).HasConversion<string>().HasMaxLength(20).IsRequired();
             ad.Property(petAd => petAd.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+            ad.Property(petAd => petAd.Title).HasMaxLength(100).IsRequired();
             ad.Property(petAd => petAd.Species).HasMaxLength(50).IsRequired();
             ad.Property(petAd => petAd.Breed).HasMaxLength(100);
             ad.Property(petAd => petAd.Description).HasMaxLength(2000).IsRequired();

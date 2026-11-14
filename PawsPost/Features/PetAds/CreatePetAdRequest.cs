@@ -6,12 +6,16 @@ namespace PawsPost.Features.PetAds;
 
 public class CreatePetAdRequest : IValidatableObject
 {
+    public const int TitleMaxLength = 100;
     public const int SpeciesMaxLength = 50;
     public const int BreedMaxLength = 100;
     public const int DescriptionMaxLength = 2000;
     public const int LocationMaxLength = 100;
     public const int AgeInMonthsMax = 360;
     public const decimal PriceMax = 1_000_000m;
+
+    [Required]
+    public string? Title { get; init; }
 
     // Nullable so a missing value is reported instead of being read as the first enum value.
     [Required]
@@ -38,6 +42,12 @@ public class CreatePetAdRequest : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        var title = Title?.Trim() ?? string.Empty;
+        if (title.Length > TitleMaxLength)
+        {
+            yield return TooLong(nameof(Title), TitleMaxLength);
+        }
+
         var species = Species?.Trim() ?? string.Empty;
         if (species.Length > SpeciesMaxLength)
         {

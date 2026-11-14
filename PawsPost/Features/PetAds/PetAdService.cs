@@ -12,6 +12,7 @@ public class PetAdService(AppDbContext dbContext, TimeProvider timeProvider) : I
         var ad = new PetAd
         {
             Id = Guid.NewGuid(),
+            Title = request.Title!.Trim(),
             Type = type,
             Species = request.Species!.Trim(),
             Breed = NullIfEmpty(request.Breed),
@@ -29,7 +30,7 @@ public class PetAdService(AppDbContext dbContext, TimeProvider timeProvider) : I
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return new PetAdResponse(
-            ad.Id, ad.Type, ad.Species, ad.Breed, ad.AgeInMonths, ad.Description,
+            ad.Id, ad.Title, ad.Type, ad.Species, ad.Breed, ad.AgeInMonths, ad.Description,
             ad.Price, ad.Location, ad.Status, ad.OwnerId, ad.CreatedAt);
     }
 
