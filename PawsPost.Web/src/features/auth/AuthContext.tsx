@@ -37,43 +37,55 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading')
   const [user, setUser] = useState<User | null>(null)
-  const started = useRef(false)
+  // Counts how often a login or logout has decided the session. A request
+  // that started before a newer decision must not overwrite it.
+  const version = useRef(0)
 
   useEffect(() => {
-    // Guard so the start check runs once, also under StrictMode.
-    if (started.current) {
-      return
+    // Set by the cleanup, so a result that arrives after unmount (or after
+    // the extra StrictMode unmount in development) is ignored.
+    let cancelled = false
+    const startVersion = version.current
+
+    function apply(nextUser: User | null) {
+      if (cancelled || version.current !== startVersion) {
+        return
+      }
+      setUser(nextUser)
+      setStatus(nextUser ? 'loggedIn' : 'loggedOut')
     }
-    started.current = true
 
     async function checkSession() {
       try {
         const { data } = await client.GET('/api/auth/me')
-        if (data) {
-          setUser(data)
-          setStatus('loggedIn')
-        } else {
-          // 401 is normal here: nobody is logged in.
-          setStatus('loggedOut')
-        }
+        // No data means 401, which is normal here: nobody is logged in.
+        apply(data ?? null)
       } catch {
         // Network failure: treat as logged out, no error shown.
-        setStatus('loggedOut')
+        apply(null)
       }
     }
 
     void checkSession()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const login = useCallback(
     async (email: string, password: string): Promise<ActionResult> => {
+      const startVersion = version.current
       try {
         const { data, error, response } = await client.POST('/api/auth/login', {
           body: { email, password },
         })
         if (data) {
-          setUser(data)
-          setStatus('loggedIn')
+          // A logout that finished while this login ran is newer and wins.
+          if (version.current === startVersion) {
+            version.current += 1
+            setUser(data)
+            setStatus('loggedIn')
+          }
           return { ok: true }
         }
         return {
@@ -109,12 +121,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const logout = useCallback(async (): Promise<LogoutResult> => {
+    const startVersion = version.current
     try {
       const { response } = await client.POST('/api/auth/logout')
       // 401 means already logged out, so it counts as success.
       if (response.ok || response.status === 401) {
-        setUser(null)
-        setStatus('loggedOut')
+        // A login that finished while this logout ran is newer and wins.
+        if (version.current === startVersion) {
+          version.current += 1
+          setUser(null)
+          setStatus('loggedOut')
+        }
         return { ok: true }
       }
       return { ok: false }
