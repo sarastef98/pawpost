@@ -77,6 +77,11 @@ public static class PetAdTestHelpers
         return client.GetAsync(string.IsNullOrEmpty(query) ? PetAdsUrl : $"{PetAdsUrl}?{query}");
     }
 
+    public static Task<HttpResponseMessage> GetPetAdAsync(this HttpClient client, string id)
+    {
+        return client.GetAsync($"{PetAdsUrl}/{id}");
+    }
+
     /// <summary>A PetAd with fixed values. Pass the owner id of a seeded user.</summary>
     public static PetAd BuildPetAd(
         Guid ownerId,

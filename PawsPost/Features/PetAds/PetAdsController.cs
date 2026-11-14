@@ -10,6 +10,9 @@ namespace PawsPost.Features.PetAds;
 [Authorize]
 public class PetAdsController(IPetAdService petAdService) : ControllerBase
 {
+    // Route name of the details action. CreateAsync uses it for the Location header.
+    private const string GetByIdRouteName = "GetPetAdById";
+
     // Public on purpose: anyone can browse. The class-level [Authorize] still protects every other action.
     [HttpGet]
     [AllowAnonymous]
@@ -20,6 +23,24 @@ public class PetAdsController(IPetAdService petAdService) : ControllerBase
     {
         var page = await petAdService.ListAsync(request, cancellationToken);
         return Ok(page);
+    }
+
+    // No [AllowAnonymous]: the class-level [Authorize] applies, so login is required.
+    // Unknown ids and ads that are not Active both give 404.
+    [HttpGet("{id}", Name = GetByIdRouteName)]
+    [ProducesResponseType<PetAdDetailsResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetByIdAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var ad = await petAdService.GetByIdAsync(id, cancellationToken);
+        if (ad is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(ad);
     }
 
     [HttpPost]
@@ -39,7 +60,7 @@ public class PetAdsController(IPetAdService petAdService) : ControllerBase
         // The owner always comes from the login cookie, never from the request body.
         var ad = await petAdService.CreateAsync(User.GetUserId(), request, cancellationToken);
 
-        // No Location header yet: there is no "get one ad" endpoint.
-        return StatusCode(StatusCodes.Status201Created, ad);
+        // 201 with a Location header that points at the details endpoint.
+        return CreatedAtRoute(GetByIdRouteName, new { id = ad.Id }, ad);
     }
 }
