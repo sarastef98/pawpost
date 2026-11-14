@@ -4,6 +4,8 @@ public class PetAd
 {
     public Guid Id { get; set; }
 
+    public string Title { get; set; } = string.Empty;
+
     public PetAdType Type { get; set; }
 
     public string Species { get; set; } = string.Empty;
