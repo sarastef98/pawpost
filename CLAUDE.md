@@ -1,4 +1,4 @@
-# PawPost
+# PawsPost
 
 A marketplace for posting ads to **adopt out or sell animals**.
 
@@ -8,10 +8,10 @@ client meeting notes -> GitHub issue -> dev plan -> implementation -> tests -> P
 
 ## Stack
 
-- Backend: C#, ASP.NET Core Web API (controllers) on .NET 10 LTS (`src/PawPost.Api`)
+- Backend: C#, ASP.NET Core Web API (controllers) on .NET 10 LTS (`PawsPost`)
 - Data access: EF Core with SQLite for now, schema changes through EF migrations
-- Tests: xUnit, FluentAssertions, `WebApplicationFactory` for API tests (`tests/PawPost.Api.Tests`)
-- Frontend, built after the backend: React + TypeScript + Vite (`src/PawPost.Web`)
+- Tests: xUnit with plain `Assert`, `WebApplicationFactory` for API tests (`PawsPost.Tests`)
+- Frontend, built after the backend: React + TypeScript + Vite (`src/PawsPost.Web`)
 - Source control: GitHub. Issues and PRs are the source of truth for work.
 
 Nothing is built yet. Everything arrives through the pipeline, one small feature at a time.
@@ -22,8 +22,8 @@ Nothing is built yet. Everything arrives through the pipeline, one small feature
 dotnet build
 dotnet test
 dotnet format --verify-no-changes
-dotnet ef migrations add <Name> --project src/PawPost.Api
-dotnet ef database update --project src/PawPost.Api
+dotnet ef migrations add <Name> --project PawsPost
+dotnet ef database update --project PawsPost
 ```
 
 ## Domain (defaults, change when the client says otherwise)
@@ -37,7 +37,7 @@ dotnet ef database update --project src/PawPost.Api
 
 Keep it simple. This is a straightforward CRUD app, so no CQRS and no extra layers unless a real need appears.
 
-- Organize by feature. Folders inside `PawPost.Api`:
+- Organize by feature. Folders inside `PawsPost`:
   - `Features/PetAds/` holds the controller, service, interface, DTOs and validator for that feature
   - `Data/` holds `AppDbContext`, entities and migrations
   - `Common/` holds shared helpers

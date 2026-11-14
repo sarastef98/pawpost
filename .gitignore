@@ -489,3 +489,7 @@ $RECYCLE.BIN/
 .env
 .env.*
 .claude/settings.local.json
+
+*.db
+*.db-shm
+*.db-wal
