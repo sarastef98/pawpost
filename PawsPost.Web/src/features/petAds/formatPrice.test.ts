@@ -49,6 +49,17 @@ describe('formatPrice', () => {
     expect(formatPrice('Sale', Infinity)).toBeNull()
     expect(formatPrice('Sale', -5)).toBeNull()
   })
+
+  it.each(['0x10', '1e3', ' 12 ', '', 'abc'])(
+    'gives nothing for the price string %j that is not a plain decimal',
+    (price) => {
+      expect(formatPrice('Sale', price)).toBeNull()
+    },
+  )
+
+  it('accepts a plain decimal price string with cents', () => {
+    expect(formatPrice('Sale', '150.50')).toBe('€150.50')
+  })
 })
 
 describe('toFiniteNumber', () => {

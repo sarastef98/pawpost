@@ -8,13 +8,17 @@ const priceFormat = new Intl.NumberFormat(PRICE_LOCALE, {
   currency: PRICE_CURRENCY,
 })
 
-// Turns a value that may be a number or a numeric string into a finite
+// A plain decimal string such as "12", "-3" or "150.50". No spaces, hex or
+// exponent, which Number() would otherwise accept.
+const PLAIN_DECIMAL = /^-?\d+(\.\d+)?$/
+
+// Turns a value that may be a number or a plain decimal string into a finite
 // number, or null when it is missing or not a number.
 export function toFiniteNumber(value: unknown): number | null {
   if (typeof value === 'number') {
     return Number.isFinite(value) ? value : null
   }
-  if (typeof value === 'string' && value.trim() !== '') {
+  if (typeof value === 'string' && PLAIN_DECIMAL.test(value)) {
     const converted = Number(value)
     return Number.isFinite(converted) ? converted : null
   }
