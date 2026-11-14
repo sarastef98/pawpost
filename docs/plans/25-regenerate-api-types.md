@@ -4,7 +4,7 @@ Status: Approved
 Layer: frontend
 
 ## Goal
-`PawsPost.Web/src/api/schema.d.ts` matches the OpenAPI document of the merged `main` (backend #21, #2 and #18, main at 7ce6bb7). It then contains the pet-ads list endpoint, the details endpoint, the `Location` header on create, and a required `title`. Nothing else changes: no screen, no behavior, no test, no package.
+`PawsPost.Web/src/api/schema.d.ts` matches the OpenAPI document of the merged `main` (backend #21, #2 and #18, main at 7ce6bb7). It then contains the pet-ads list endpoint, the details endpoint and a required `title`. Nothing else changes: no screen, no behavior, no test, no package.
 
 ## Approach
 Run the existing generator once (`npm run gen:api` from `PawsPost.Web`) against an API started from the merged `main`, and commit only the regenerated `schema.d.ts`. The generator scripts are not changed. The file is never edited by hand (`.claude/rules/frontend.md`). Because this is a generated file, the checks are: the generated content is what the issue expects, nothing else in the repo changed, and every existing check still passes.
@@ -19,6 +19,7 @@ Recommended defaults, so the user can answer "go with suggestions":
 4. No new tests, no new npm package, no change to scripts, tsconfig, `package.json` or lock file.
 5. If a frontend file stops compiling, apply the smallest fix; if it is more than trivial, stop and report.
 6. The commit message is exactly `chore: regenerate API types from the current backend (#25)`.
+7. Decided by the product owner (option A): the `Location` header is NOT expected in the generated types. The merged API sets it at runtime on the create `201`, but does not declare it in its OpenAPI document (`POST /api/pet-ads` responses `201` has no headers), so the generator cannot write it and hand-editing is forbidden. The frontend can read the header from the response at runtime if it is ever needed. Declaring it in OpenAPI would be a separate backend issue, which is not planned.
 
 ## API endpoints
 No new endpoints are used by code and none are created. This plan only updates the types of existing backend endpoints. After regeneration `schema.d.ts` must describe these (source: the running merged `main`):
@@ -27,7 +28,7 @@ No new endpoints are used by code and none are created. This plan only updates t
 |---|---|---|---|---|---|
 | GET | /api/pet-ads | public | query `page`, `pageSize`, `species`, `type` | `PetAdListResponse` (`items` of `PetAdListItemResponse`, `totalCount`, `page`, `pageSize`) | as generated |
 | GET | /api/pet-ads/{id} | public | path `id` | `PetAdDetailsResponse` (no `ownerId`) | as generated |
-| POST | /api/pet-ads | logged in | `CreatePetAdRequest` (`title` required) | `PetAdResponse` (`title` required), `201` declares a `Location` header | as generated |
+| POST | /api/pet-ads | logged in | `CreatePetAdRequest` (`title` required) | `PetAdResponse` (`title` required) | as generated |
 
 The status codes are whatever the generator writes from the backend. They are not decided here and must not be edited.
 
@@ -77,18 +78,19 @@ Expected additions (from the issue):
 - `get` operation on `/api/pet-ads` with query `page`, `pageSize`, `species`, `type`, returning `PetAdListResponse`.
 - Schemas `PetAdListResponse` (`items`, `totalCount`, `page`, `pageSize`), `PetAdListItemResponse` and `PetAdDetailsResponse`. `PetAdDetailsResponse` has no `ownerId`.
 - `title` as a required field in `CreatePetAdRequest` and `PetAdResponse`.
-- A `Location` header declared on the `201` response of `POST /api/pet-ads`.
 - Closely related generated detail that follows from those: new operation names under `operations`, new `parameters` entries, and new response/`404`/`400` entries for the new operations. These are fine only when they belong to the endpoints and schemas above.
 
+The `Location` header is not expected (decision 7). Its absence is not a problem.
+
 Anything else is a stop-and-ask, in particular:
-- any removed line that is not part of an obvious rewrite of the same type (for example the `PetAdResponse` block gaining `title`),
+- any removed line that is not part of an obvious rewrite of the same type (for example the old empty `get?: never` or empty `operations` type being replaced),
 - any change to the auth types or paths (`/api/auth/*`, `LoginRequest`, `RegisterRequest`, `UserResponse`),
 - any change to `/api/health`, `HealthResponse`, `ProblemDetails` or `ValidationProblemDetails`,
 - a header comment or formatting change that is not explained by the generator version.
 
 If the diff has an unexpected change, do not edit the file to remove it and do not commit. Report it to the user with the exact lines. It may mean the backend has an unrelated change, or the generator version drifted.
 
-Also confirm every item of the issue's acceptance criteria 3 to 5 is true in the file (a `Grep` for `PetAdListResponse`, `PetAdListItemResponse`, `PetAdDetailsResponse`, `"/api/pet-ads/{id}"`, `location`, and `title: string;` inside the two request/response schemas).
+Also confirm the issue's acceptance criteria about the list endpoint, the details endpoint and `title` are true in the file (a `Grep` for `PetAdListResponse`, `PetAdListItemResponse`, `PetAdDetailsResponse`, `"/api/pet-ads/{id}"`, and `title` inside the request/response schemas).
 
 ## Line endings and formatting
 The generator writes the file with the line endings Node produces on this machine (CRLF on Windows). Git may show a CRLF warning. This is expected.
@@ -129,6 +131,16 @@ Not expected. If `npx tsc -b` fails after regenerating:
 6. Run the checks: `npx tsc -b`, `npm test` (same counts as the baseline), `npm run lint`, `npx prettier --check --end-of-line auto src`, `npm run build`. Fix a compile error only as described above.
 7. Commit only `PawsPost.Web/src/api/schema.d.ts`, by explicit path. Commit message exactly: `chore: regenerate API types from the current backend (#25)`. If a compile fix was needed, it goes in its own later commit.
 8. Push the branch and open the PR from the template with `Closes #25`. In the PR description list the checks run, the baseline and final test counts, and that `schema.d.ts` was generated and not edited.
+
+## Results of the first run
+Measured by the developer on the first run:
+- The diff was 153 insertions and 2 deletions, in `schema.d.ts` only.
+- The two removals are the old empty `get?: never` on `/api/pet-ads` and the empty `operations` type.
+- The additions are: GET `/api/pet-ads`, GET `/api/pet-ads/{id}` (operation `GetPetAdById`), `PetAdListResponse`, `PetAdListItemResponse`, `PetAdDetailsResponse` (no `ownerId`), and `title`.
+- `title` is `title: null | string` in `CreatePetAdRequest` (required key, but nullable like `species` and `description`). In `PetAdResponse` and the new schemas it is `title: string`.
+- No changes to the auth types, health or `ProblemDetails`.
+- `npm run gen:api` gave the same output on a second run (stable).
+- `npx tsc -b`, 158 tests, lint, Prettier and build were all green.
 
 ## Risks and open questions
 Open questions: none that block, if the user accepts the recommended defaults in "Decisions" ("go with suggestions").

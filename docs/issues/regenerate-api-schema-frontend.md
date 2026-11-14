@@ -18,7 +18,7 @@ As a frontend developer, I want `schema.d.ts` to match the backend's OpenAPI doc
 - [ ] The API is run from the merged `main` (after PR #24 is merged), and `npm run gen:api` is run from `PawsPost.Web`. `schema.d.ts` is not edited by hand (see `.claude/rules/frontend.md`).
 - [ ] The diff of `schema.d.ts` contains only what the generator produces. No manual changes.
 - [ ] `schema.d.ts` contains `GET /api/pet-ads` with query parameters `page`, `pageSize`, `species` and `type`, and the response schema `PetAdListResponse` (`items`, `totalCount`, `page`, `pageSize`) whose items are `PetAdListItemResponse`.
-- [ ] `schema.d.ts` contains `GET /api/pet-ads/{id}` returning `PetAdDetailsResponse` (which has no `ownerId`), and the create `201` response declares a `Location` header.
+- [ ] `schema.d.ts` contains `GET /api/pet-ads/{id}` returning `PetAdDetailsResponse` (which has no `ownerId`).
 - [ ] `title` is present and required in `CreatePetAdRequest` and `PetAdResponse`.
 - [ ] `npx tsc -b` passes (TypeScript strict is on).
 - [ ] `npm test` passes.
@@ -32,6 +32,7 @@ As a frontend developer, I want `schema.d.ts` to match the backend's OpenAPI doc
 - Building the list screen (#19) or the details screen (#20).
 - Any backend change.
 - Changing the generator scripts.
+- Declaring the Location header of the create endpoint in the OpenAPI document (it is set at runtime but not in the generated types; the frontend can read it from the response if it ever needs it)
 
 ## Open questions
 - `npm run gen:api` needs the API running. `scripts/gen-api.ts` downloads `/openapi/v1.json` from the API and writes `src/api/schema.d.ts` with `openapi-typescript`. It does not start the API. The URL is read by `scripts/api-url.ts` from the first `applicationUrl` of the `http` profile in `PawsPost/Properties/launchSettings.json`, so there is no URL to pass in. If the API is not running, the script prints "Is the API running?" and fails. Who starts the API, and from which checkout? Decided default: the developer doing this issue starts it from an up-to-date `main` with `dotnet run --project ../PawsPost --launch-profile http`, runs `npm run gen:api` in another terminal, then stops the API. Start the API only for this step and stop it afterwards, because a running API locks the backend build output.
