@@ -5,7 +5,7 @@ import Button from '../../components/Button'
 import Card from '../../components/Card'
 import ErrorMessage from '../../components/ErrorMessage'
 import TextField from '../../components/TextField'
-import { useAuth } from './AuthContext'
+import { useAuth } from './useAuth'
 import type { FormErrors } from './authErrors'
 
 function readNotice(state: unknown): string | null {

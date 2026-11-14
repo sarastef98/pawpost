@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Button from '../../components/Button'
 import Spinner from '../../components/Spinner'
-import { useAuth } from './AuthContext'
+import { useAuth } from './useAuth'
 import { LOGOUT_FAILED_MESSAGE } from './authErrors'
 
 const linkClasses =

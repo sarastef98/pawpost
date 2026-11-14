@@ -16,7 +16,8 @@ import {
   okResult,
   testUser,
 } from '../../test/apiResponses'
-import { AuthProvider, useAuth } from './AuthContext'
+import { AuthProvider } from './AuthContext'
+import { useAuth } from './useAuth'
 
 vi.mock('../../api/client', () => ({
   client: { GET: vi.fn(), POST: vi.fn() },

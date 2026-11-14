@@ -1,35 +1,9 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { client } from '../../api/client'
-import type { components } from '../../api/schema'
 import { mapFormErrors, networkFormErrors } from './authErrors'
-import type { FormErrors } from './authErrors'
-
-type User = components['schemas']['UserResponse']
-
-type AuthStatus = 'loading' | 'loggedOut' | 'loggedIn'
-
-export type ActionResult = { ok: true } | { ok: false; errors: FormErrors }
-
-export type LogoutResult = { ok: true } | { ok: false }
-
-type AuthContextValue = {
-  status: AuthStatus
-  user: User | null
-  login: (email: string, password: string) => Promise<ActionResult>
-  register: (email: string, password: string) => Promise<ActionResult>
-  logout: () => Promise<LogoutResult>
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null)
+import { AuthContext } from './useAuth'
+import type { ActionResult, AuthStatus, LogoutResult, User } from './useAuth'
 
 // The login state lives only in memory. The login cookie is HttpOnly: the
 // browser sends it by itself, this code never reads or writes it. The password
@@ -146,13 +120,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
-
-// oxlint-disable-next-line react/only-export-components
-export function useAuth(): AuthContextValue {
-  const value = useContext(AuthContext)
-  if (!value) {
-    throw new Error('useAuth must be used inside AuthProvider')
-  }
-  return value
 }
