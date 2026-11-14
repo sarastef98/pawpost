@@ -63,11 +63,18 @@ describe('Button', () => {
   })
 
   it.each(['primary', 'secondary', 'danger'] as const)(
-    'renders the %s variant',
-    (variant) => {
-      render(<Button variant={variant}>Action</Button>)
+    'calls onClick when the %s variant is clicked',
+    async (variant) => {
+      const onClick = vi.fn()
+      render(
+        <Button variant={variant} onClick={onClick}>
+          Action
+        </Button>,
+      )
 
-      expect(screen.getByRole('button', { name: 'Action' })).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Action' }))
+
+      expect(onClick).toHaveBeenCalledTimes(1)
     },
   )
 })
