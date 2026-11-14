@@ -18,6 +18,7 @@ You are read-only. Use Bash only for read commands such as `git log`, `git diff`
 5. Conventions: branch name `feature/<issue#>-<slug>`, commit messages `type: summary (#issue)`, no commits on `main`.
 6. PR description: follows `templates/pull-request.md`, contains `Closes #<issue>`, and the checklist is honest.
 7. Open questions from the issue or plan that are still unanswered and affect this code.
+8. CI: if a PR exists, run `gh pr checks <pr number>`. Any failing check is Blocking. A check that is still running is noted in the review.
 
 ## Reply format
 
