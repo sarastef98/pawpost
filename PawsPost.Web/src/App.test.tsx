@@ -53,6 +53,31 @@ describe('App', () => {
     ).toBeInTheDocument()
   })
 
+  it('shows the login page inside the layout at the login route', async () => {
+    renderAt('/login')
+
+    expect(screen.getByRole('banner')).toBeInTheDocument()
+    expect(screen.getByRole('main')).toBeInTheDocument()
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Log in' }),
+    ).toBeInTheDocument()
+  })
+
+  it('shows the register page inside the layout at the register route', async () => {
+    renderAt('/register')
+
+    expect(screen.getByRole('banner')).toBeInTheDocument()
+    expect(screen.getByRole('main')).toBeInTheDocument()
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Create your account',
+      }),
+    ).toBeInTheDocument()
+  })
+
   it('goes from the style guide back to the home page when the logo is clicked', async () => {
     const user = userEvent.setup()
     renderAt('/styleguide')
