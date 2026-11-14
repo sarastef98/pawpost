@@ -6,7 +6,44 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: {
+            parameters: {
+                query?: {
+                    page?: number | string;
+                    pageSize?: number | string;
+                    species?: string;
+                    type?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PetAdListResponse"];
+                        "application/json": components["schemas"]["PetAdListResponse"];
+                        "text/json": components["schemas"]["PetAdListResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+            };
+        };
         put?: never;
         post: {
             parameters: {
@@ -58,6 +95,22 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pet-ads/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPetAdById"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -328,6 +381,7 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         CreatePetAdRequest: {
+            title: null | string;
             type: null | components["schemas"]["PetAdType"];
             species: null | string;
             breed?: null | string;
@@ -345,9 +399,48 @@ export interface components {
             email: string;
             password: string;
         };
+        PetAdDetailsResponse: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            type: components["schemas"]["PetAdType"];
+            species: string;
+            breed: null | string;
+            /** Format: int32 */
+            ageInMonths: number | string;
+            description: string;
+            /** Format: double */
+            price: null | number | string;
+            location: null | string;
+            status: components["schemas"]["PetAdStatus"];
+            /** Format: date-time */
+            createdAt: string;
+        };
+        PetAdListItemResponse: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            type: components["schemas"]["PetAdType"];
+            species: string;
+            /** Format: double */
+            price: null | number | string;
+            location: null | string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        PetAdListResponse: {
+            items: components["schemas"]["PetAdListItemResponse"][];
+            /** Format: int32 */
+            totalCount: number | string;
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+        };
         PetAdResponse: {
             /** Format: uuid */
             id: string;
+            title: string;
             type: components["schemas"]["PetAdType"];
             species: string;
             breed: null | string;
@@ -403,4 +496,62 @@ export interface components {
     pathItems: never;
 }
 export type $defs = Record<string, never>;
-export type operations = Record<string, never>;
+export interface operations {
+    GetPetAdById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["PetAdDetailsResponse"];
+                    "application/json": components["schemas"]["PetAdDetailsResponse"];
+                    "text/json": components["schemas"]["PetAdDetailsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ValidationProblemDetails"];
+                    "application/json": components["schemas"]["ValidationProblemDetails"];
+                    "text/json": components["schemas"]["ValidationProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+}
