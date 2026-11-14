@@ -93,6 +93,39 @@ public class PetAdService(AppDbContext dbContext, TimeProvider timeProvider) : I
         return new PetAdListResponse(items, totalCount, request.Page, request.PageSize);
     }
 
+    public async Task<PetAdDetailsResponse?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
+    {
+        // Only Active ads are visible, to everyone. A missing ad and a non-Active ad look the same (null).
+        var row = await dbContext.PetAds
+            .AsNoTracking()
+            .Where(petAd => petAd.Id == id && petAd.Status == PetAdStatus.Active)
+            .Select(petAd => new
+            {
+                petAd.Id,
+                petAd.Title,
+                petAd.Type,
+                petAd.Species,
+                petAd.Breed,
+                petAd.AgeInMonths,
+                petAd.Description,
+                petAd.Price,
+                petAd.Location,
+                petAd.Status,
+                petAd.CreatedAt
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (row is null)
+        {
+            return null;
+        }
+
+        // SQLite returns DateTime with Kind Unspecified. Mark it as UTC so the JSON ends with "Z".
+        return new PetAdDetailsResponse(
+            row.Id, row.Title, row.Type, row.Species, row.Breed, row.AgeInMonths, row.Description,
+            row.Price, row.Location, row.Status, DateTime.SpecifyKind(row.CreatedAt, DateTimeKind.Utc));
+    }
+
     private static string? NullIfEmpty(string? value)
     {
         var trimmed = value?.Trim();
