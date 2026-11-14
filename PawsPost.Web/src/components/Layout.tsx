@@ -1,4 +1,5 @@
 import { Link, Outlet } from 'react-router-dom'
+import AuthNav from '../features/auth/AuthNav'
 
 const currentYear = new Date().getFullYear()
 
@@ -10,7 +11,9 @@ export default function Layout() {
           <Link to="/" className="text-xl font-semibold text-primary">
             PawsPost
           </Link>
-          <nav aria-label="Main" />
+          <nav aria-label="Main">
+            <AuthNav />
+          </nav>
         </div>
       </header>
       <main className="mx-auto w-full max-w-content flex-1 px-4 py-6">

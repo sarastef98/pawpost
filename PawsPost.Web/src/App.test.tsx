@@ -1,13 +1,31 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import App from './App'
+import { AuthProvider } from './features/auth/AuthContext'
+
+// The auth provider asks the API who is logged in. Tests answer "nobody" (401)
+// at the API client boundary.
+vi.mock('./api/client', () => ({
+  client: {
+    GET: vi.fn(() =>
+      Promise.resolve({
+        data: undefined,
+        error: {},
+        response: { status: 401, ok: false },
+      }),
+    ),
+    POST: vi.fn(),
+  },
+}))
 
 function renderAt(url: string) {
   render(
     <MemoryRouter initialEntries={[url]}>
-      <App />
+      <AuthProvider>
+        <App />
+      </AuthProvider>
     </MemoryRouter>,
   )
 }
@@ -32,6 +50,31 @@ describe('App', () => {
     expect(screen.getByRole('contentinfo')).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { level: 1, name: 'Style guide' }),
+    ).toBeInTheDocument()
+  })
+
+  it('shows the login page inside the layout at the login route', async () => {
+    renderAt('/login')
+
+    expect(screen.getByRole('banner')).toBeInTheDocument()
+    expect(screen.getByRole('main')).toBeInTheDocument()
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Log in' }),
+    ).toBeInTheDocument()
+  })
+
+  it('shows the register page inside the layout at the register route', async () => {
+    renderAt('/register')
+
+    expect(screen.getByRole('banner')).toBeInTheDocument()
+    expect(screen.getByRole('main')).toBeInTheDocument()
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Create your account',
+      }),
     ).toBeInTheDocument()
   })
 
