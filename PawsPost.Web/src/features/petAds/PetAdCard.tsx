@@ -18,7 +18,11 @@ export default function PetAdCard({ ad }: PetAdCardProps) {
         <div>
           <Badge variant={ad.type === 'Sale' ? 'sale' : 'adoption'} />
         </div>
-        {price && <p className="text-base font-semibold text-text">{price}</p>}
+        {price && (
+          <p className="text-base font-semibold break-words text-text">
+            {price}
+          </p>
+        )}
         {ad.location && (
           <p className="text-sm break-words text-muted">{ad.location}</p>
         )}

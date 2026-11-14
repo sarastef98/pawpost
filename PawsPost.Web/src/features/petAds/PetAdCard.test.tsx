@@ -38,6 +38,14 @@ describe('PetAdCard', () => {
     expect(screen.getByText('€150.50')).toBeInTheDocument()
   })
 
+  it('shows a very long price in full', () => {
+    renderCard({ type: 'Sale', price: 1e21 })
+
+    expect(
+      screen.getByText('€1,000,000,000,000,000,000,000.00'),
+    ).toBeInTheDocument()
+  })
+
   it('shows the price with two decimals and thousands separators', () => {
     renderCard({ type: 'Sale', price: 1200 })
 
