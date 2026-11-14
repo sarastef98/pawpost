@@ -35,7 +35,7 @@ No new or changed API endpoints. One development-only page is added:
 This adds no data-changing endpoint, so the usual success / validation / authorization trio is replaced by environment checks:
 - `GetSwaggerUi_InDevelopment_ReturnsHtmlPage`: 200 and an HTML content type.
 - `GetSwaggerUi_InProduction_ReturnsNotFound`: the factory is started with the `Production` environment and `/swagger/index.html` answers 404.
-- `GetOpenApiDocument_InDevelopment_ListsPetAdAndAuthPaths`: the document at `/openapi/v1.json` contains `/api/pet-ads` and `/api/auth/login`, which proves the page has something to show.
+- `GetOpenApiDocument_InDevelopment_ListsAuthPaths`: the document at `/openapi/v1.json` contains `/api/auth/register` and `/api/auth/login`, which proves the page has something to show. (Pet ad endpoints live on `feature/1-create-pet-ad`, not yet in `main`, so they are not asserted here. They appear on the page automatically once #1 is merged.)
 
 ## Steps
 1. After the plan is approved, add the package reference (`chore: add Swashbuckle SwaggerUI package (#6)`).
