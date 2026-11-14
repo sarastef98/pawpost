@@ -1,7 +1,7 @@
 import { useId } from 'react'
 import type { InputHTMLAttributes } from 'react'
 
-type TextFieldProps = InputHTMLAttributes<HTMLInputElement> & {
+type TextFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> & {
   label: string
   helperText?: string
   errorText?: string

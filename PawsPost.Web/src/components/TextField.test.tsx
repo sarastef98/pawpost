@@ -51,12 +51,6 @@ describe('TextField', () => {
     expect(screen.getByText('Email is required')).toBeInTheDocument()
   })
 
-  it('keeps the label linked when a caller passes its own id', () => {
-    render(<TextField label="Email" id="custom-id" />)
-
-    expect(screen.getByLabelText('Email')).toBeInTheDocument()
-  })
-
   it('keeps the helper text linked when a caller passes its own aria-describedby', () => {
     render(
       <>
