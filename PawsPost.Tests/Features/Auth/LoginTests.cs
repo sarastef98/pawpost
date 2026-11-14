@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using PawsPost.Features.Auth;
 using PawsPost.Tests.Infrastructure;
 
@@ -156,7 +159,7 @@ public class LoginTests
     }
 
     [Fact]
-    public async Task Login_WrongPasswordAndUnknownEmail_ReturnSameBody()
+    public async Task Login_WrongPassword_ReturnsProblemDetails()
     {
         // Arrange
         using var factory = new PawsPostFactory();
@@ -164,17 +167,48 @@ public class LoginTests
         await client.RegisterAsync("a@x.com");
 
         // Act
+        var response = await client.LoginAsync("a@x.com", "Wrong1234!");
+
+        // Assert
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
+    public async Task Login_UnknownEmail_ReturnsSameStatusAsWrongPassword()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = factory.CreateApiClient();
+        await client.RegisterAsync("a@x.com");
         var wrongPassword = await client.LoginAsync("a@x.com", "Wrong1234!");
+
+        // Act
         var unknownEmail = await client.LoginAsync("nobody@x.com");
 
         // Assert
         Assert.Equal(wrongPassword.StatusCode, unknownEmail.StatusCode);
-        Assert.Equal("application/problem+json", wrongPassword.Content.Headers.ContentType?.MediaType);
-        var wrongBody = await wrongPassword.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
-        var unknownBody = await unknownEmail.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
-        Assert.Equal(wrongBody?.Title, unknownBody?.Title);
-        Assert.Equal(wrongBody?.Detail, unknownBody?.Detail);
-        Assert.Equal(wrongBody?.Status, unknownBody?.Status);
+    }
+
+    [Fact]
+    public async Task Login_UnknownEmail_ReturnsSameBodyAsWrongPassword()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = factory.CreateApiClient();
+        await client.RegisterAsync("a@x.com");
+        var wrongPassword = await client.LoginAsync("a@x.com", "Wrong1234!");
+        var wrongBody = await wrongPassword.Content.ReadFromJsonAsync<ProblemDetails>();
+
+        // Act
+        var unknownEmail = await client.LoginAsync("nobody@x.com");
+        var unknownBody = await unknownEmail.Content.ReadFromJsonAsync<ProblemDetails>();
+
+        // Assert
+        Assert.NotNull(wrongBody);
+        Assert.NotNull(unknownBody);
+        Assert.Equivalent(
+            new { wrongBody.Type, wrongBody.Title, wrongBody.Detail, wrongBody.Status },
+            new { unknownBody.Type, unknownBody.Title, unknownBody.Detail, unknownBody.Status });
     }
 
     [Fact]
@@ -183,8 +217,10 @@ public class LoginTests
         // Arrange
         using var factory = new PawsPostFactory();
         var client = factory.CreateApiClient();
+        var maxFailedAttempts = factory.Services
+            .GetRequiredService<IOptions<IdentityOptions>>().Value.Lockout.MaxFailedAccessAttempts;
         await client.RegisterAsync("a@x.com");
-        for (var i = 0; i < 5; i++)
+        for (var i = 0; i < maxFailedAttempts; i++)
         {
             await client.LoginAsync("a@x.com", "Wrong1234!");
         }
