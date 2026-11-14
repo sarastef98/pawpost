@@ -33,6 +33,15 @@ export default function LoginPage() {
   const submitting = useRef(false)
   const formRef = useRef<HTMLFormElement>(null)
   const alertRef = useRef<HTMLDivElement>(null)
+  const [shownNotice, setShownNotice] = useState('')
+
+  // Screen readers announce a status region when its content changes, not
+  // when it appears together with its content. So the empty region renders
+  // first, and the notice is filled in on the next tick.
+  useEffect(() => {
+    const timer = setTimeout(() => setShownNotice(notice ?? ''), 0)
+    return () => clearTimeout(timer)
+  }, [notice])
 
   // After a failed submit, move focus to the first field with an error, or
   // to the general message, so keyboard and screen reader users find it.
@@ -84,11 +93,14 @@ export default function LoginPage() {
     <div className="mx-auto flex w-full max-w-md flex-col gap-4">
       <h1 className="text-2xl">Log in</h1>
       <Card className="flex flex-col gap-4">
-        {notice && (
-          <p role="status" className="text-base text-success">
-            {notice}
-          </p>
-        )}
+        {/* Always in the page. While empty it is visually hidden, so it adds
+            no gap, but stays known to screen readers. */}
+        <p
+          role="status"
+          className={shownNotice ? 'text-base text-success' : 'sr-only'}
+        >
+          {shownNotice}
+        </p>
         {errors.general && (
           <div ref={alertRef} tabIndex={-1}>
             <ErrorMessage message={errors.general} />

@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -129,8 +129,11 @@ describe('RegisterPage', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Log in' }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'Your account is ready. Please log in.',
+    // The notice is filled into the status region after the first render.
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Your account is ready. Please log in.',
+      ),
     )
     expect(
       screen.queryByRole('button', { name: 'Log out' }),

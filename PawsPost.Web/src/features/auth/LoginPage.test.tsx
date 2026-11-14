@@ -282,9 +282,11 @@ describe('LoginPage', () => {
       state: { notice: 'Your account is ready. Please log in.' },
     })
 
-    expect(await screen.findByRole('status')).toHaveTextContent(
+    // The notice is filled into the status region after the first render.
+    const notice = await screen.findByText(
       'Your account is ready. Please log in.',
     )
+    expect(notice).toBe(screen.getByRole('status'))
   })
 
   it('shows no account ready message when opened directly', async () => {
@@ -292,6 +294,13 @@ describe('LoginPage', () => {
 
     await screen.findByRole('link', { name: 'Register' })
     expect(screen.queryByText(/account is ready/i)).toBeNull()
+  })
+
+  it('keeps an empty status region in the page so a later notice is announced', async () => {
+    renderLogin()
+
+    await screen.findByRole('link', { name: 'Register' })
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
   })
 
   it('works with the keyboard only: tab to the fields and press Enter to submit', async () => {
