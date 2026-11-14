@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import type { SelectHTMLAttributes } from 'react'
+import type { Ref, SelectHTMLAttributes } from 'react'
 
 type SelectOption = {
   value: string
@@ -14,6 +14,7 @@ type SelectProps = Omit<
   options: SelectOption[]
   helperText?: string
   errorText?: string
+  ref?: Ref<HTMLSelectElement>
 }
 
 export default function Select({
