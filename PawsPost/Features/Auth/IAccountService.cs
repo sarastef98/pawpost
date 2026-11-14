@@ -1,0 +1,14 @@
+namespace PawsPost.Features.Auth;
+
+public interface IAccountService
+{
+    Task<RegisterResult> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Signs the user in (sets the auth cookie). Returns null for every kind of failure.</summary>
+    Task<UserResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Returns the account with this id, or null if it no longer exists.</summary>
+    Task<UserResponse?> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken);
+
+    Task LogoutAsync(CancellationToken cancellationToken);
+}
