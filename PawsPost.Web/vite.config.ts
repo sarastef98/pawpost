@@ -1,10 +1,11 @@
+import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 import { getApiUrl } from './scripts/api-url.ts'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   server: {
     // In development the browser talks to Vite, and Vite forwards /api to the
     // API. The browser sees one origin, so no CORS setup is needed.
