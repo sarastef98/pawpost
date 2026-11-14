@@ -54,6 +54,45 @@ public class OpenApiDocumentTests(PawsPostFactory factory) : IClassFixture<PawsP
         Assert.Contains("description", names);
     }
 
+    [Fact]
+    public async Task GetOpenApiDocument_CreatePetAdRequestSchema_TitleIsRequired()
+    {
+        // Arrange
+        using var document = await GetOpenApiDocumentAsync();
+
+        // Act
+        var schema = GetSchema(document, "CreatePetAdRequest");
+
+        // Assert
+        Assert.True(schema.GetProperty("properties").TryGetProperty("title", out _));
+        Assert.Contains("title", GetRequiredNames(schema));
+    }
+
+    [Fact]
+    public async Task GetOpenApiDocument_PetAdResponseSchema_TitleIsRequired()
+    {
+        // Arrange
+        using var document = await GetOpenApiDocumentAsync();
+
+        // Act
+        var created = document.RootElement.GetProperty("paths").GetProperty("/api/pet-ads").GetProperty("post")
+            .GetProperty("responses").GetProperty("201").GetProperty("content").GetProperty("application/json").GetProperty("schema");
+        var schema = GetSchema(document, "PetAdResponse");
+
+        // Assert
+        Assert.Equal("#/components/schemas/PetAdResponse", created.GetProperty("$ref").GetString());
+        Assert.True(schema.GetProperty("properties").TryGetProperty("title", out _));
+        Assert.Contains("title", GetRequiredNames(schema));
+    }
+
+    private static JsonElement GetSchema(JsonDocument document, string name) =>
+        document.RootElement.GetProperty("components").GetProperty("schemas").GetProperty(name);
+
+    private static List<string?> GetRequiredNames(JsonElement schema) =>
+        schema.TryGetProperty("required", out var required)
+            ? required.EnumerateArray().Select(item => item.GetString()).ToList()
+            : [];
+
     private async Task<JsonDocument> GetOpenApiDocumentAsync()
     {
         using var developmentFactory = factory.WithWebHostBuilder(builder => builder.UseEnvironment("Development"));
