@@ -15,6 +15,7 @@ We keep the controller as it is and fix the generated document instead:
 - It also marks the request body as `required: true`. That is accurate, because a missing body is rejected with 400 by the controller.
 - The transformer is registered in `Program.cs` where `AddOpenApi()` is called. It applies to every endpoint, so future endpoints with a nullable body get the same fix.
 - The exact transformer type (schema vs. operation transformer) is confirmed while implementing. The choice depends on what the installed `Microsoft.AspNetCore.OpenApi` / `Microsoft.OpenApi` versions expose. If neither can do it cleanly, we stop and report instead of working around it.
+- Decision made while implementing: an **operation transformer** (`IOpenApiOperationTransformer`) was used, because it can edit each endpoint's request body directly. It works with `Microsoft.OpenApi` 2.13 without any workaround.
 
 Option rejected: making the parameter non-nullable. It would bring back the extra "request is required" error on bad JSON and change existing tests.
 
@@ -38,7 +39,7 @@ No new or changed endpoints. Only the generated OpenAPI description of `POST /ap
 This changes no data endpoint, so the usual success / validation / authorization trio is replaced by checks on the generated document (same approach as #6):
 - `GetOpenApiDocument_PetAdsPost_BodyReferencesCreatePetAdRequest`: the body schema of `POST /api/pet-ads` is a `$ref` to `CreatePetAdRequest`, with no `null` option.
 - `GetOpenApiDocument_PetAdsPost_BodyIsRequired`: `requestBody.required` is `true`.
-- `GetOpenApiDocument_CreatePetAdRequest_ListsExpectedFields`: the schema lists `type`, `species`, `ageInMonths`, `description`.
+- `GetOpenApiDocument_PetAdsPostBody_ResolvesToSchemaWithExpectedFields`: follows the `$ref` from the POST body (as Swagger UI does) and checks that the schema lists `type`, `species`, `ageInMonths`, `description`.
 - Existing pet-ad tests stay unchanged and must still pass, which proves the 400 / 401 behavior did not change.
 
 ## Steps

@@ -35,7 +35,8 @@ public sealed class NonNullableRequestBodyTransformer : IOpenApiOperationTransfo
             }
         }
 
-        // A missing body is rejected with 400, so the body is required.
+        // Only bodies that were declared nullable are touched. The controller rejects a missing body
+        // with 400, so those bodies are required. Bodies we did not change keep their own setting.
         if (changed)
         {
             requestBody.Required = true;
