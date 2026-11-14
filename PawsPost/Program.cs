@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using PawsPost.Data;
 using PawsPost.Features.Auth;
+using PawsPost.Features.PetAds;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,6 +45,8 @@ builder.Services
     .AddSignInManager();
 
 builder.Services.AddScoped<IAccountService, AccountService>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<IPetAdService, PetAdService>();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
