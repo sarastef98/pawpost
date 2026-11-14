@@ -1,13 +1,31 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import App from './App'
+import { AuthProvider } from './features/auth/AuthContext'
+
+// The auth provider asks the API who is logged in. Tests answer "nobody" (401)
+// at the API client boundary.
+vi.mock('./api/client', () => ({
+  client: {
+    GET: vi.fn(() =>
+      Promise.resolve({
+        data: undefined,
+        error: {},
+        response: { status: 401, ok: false },
+      }),
+    ),
+    POST: vi.fn(),
+  },
+}))
 
 function renderAt(url: string) {
   render(
     <MemoryRouter initialEntries={[url]}>
-      <App />
+      <AuthProvider>
+        <App />
+      </AuthProvider>
     </MemoryRouter>,
   )
 }
