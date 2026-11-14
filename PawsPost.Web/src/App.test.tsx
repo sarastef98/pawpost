@@ -1,62 +1,48 @@
 import { render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
+import { describe, expect, it } from 'vitest'
 import App from './App'
-import { client } from './api/client'
 
-// Replace the real client so tests never make network calls.
-vi.mock('./api/client', () => ({ client: { GET: vi.fn() } }))
-
-const mockGet = vi.mocked(client.GET)
+function renderAt(url: string) {
+  render(
+    <MemoryRouter initialEntries={[url]}>
+      <App />
+    </MemoryRouter>,
+  )
+}
 
 describe('App', () => {
-  beforeEach(() => {
-    mockGet.mockReset()
-  })
+  it('shows the home page inside the layout at the home route', () => {
+    renderAt('/')
 
-  it('render_default_showsHeading', () => {
-    // Arrange
-    mockGet.mockResolvedValue({ response: { ok: true } } as never)
-
-    // Act
-    render(<App />)
-
-    // Assert
+    expect(screen.getByRole('banner')).toBeInTheDocument()
+    expect(screen.getByRole('main')).toBeInTheDocument()
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument()
     expect(
-      screen.getByRole('heading', { name: 'Get started' }),
+      screen.getByRole('heading', { level: 1, name: 'Welcome to PawsPost' }),
     ).toBeInTheDocument()
   })
 
-  it('render_healthEndpointOk_showsApiOk', async () => {
-    // Arrange
-    mockGet.mockResolvedValue({ response: { ok: true } } as never)
+  it('shows the style guide inside the layout at the style guide route', () => {
+    renderAt('/styleguide')
 
-    // Act
-    render(<App />)
-
-    // Assert
-    expect(await screen.findByText('API: ok')).toBeInTheDocument()
-    expect(mockGet).toHaveBeenCalledWith('/api/health')
+    expect(screen.getByRole('banner')).toBeInTheDocument()
+    expect(screen.getByRole('main')).toBeInTheDocument()
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Style guide' }),
+    ).toBeInTheDocument()
   })
 
-  it('render_healthEndpointFails_showsApiUnreachable', async () => {
-    // Arrange
-    mockGet.mockRejectedValue(new TypeError('Failed to fetch'))
+  it('goes from the style guide back to the home page when the logo is clicked', async () => {
+    const user = userEvent.setup()
+    renderAt('/styleguide')
 
-    // Act
-    render(<App />)
+    await user.click(screen.getByRole('link', { name: 'PawsPost' }))
 
-    // Assert
-    expect(await screen.findByText('API: unreachable')).toBeInTheDocument()
-  })
-
-  it('render_healthEndpointReturnsError_showsApiUnreachable', async () => {
-    // Arrange
-    mockGet.mockResolvedValue({ response: { ok: false } } as never)
-
-    // Act
-    render(<App />)
-
-    // Assert
-    expect(await screen.findByText('API: unreachable')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Welcome to PawsPost' }),
+    ).toBeInTheDocument()
   })
 })
