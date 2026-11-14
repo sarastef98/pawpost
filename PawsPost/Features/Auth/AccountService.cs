@@ -20,14 +20,31 @@ public class AccountService(UserManager<User> userManager, SignInManager<User> s
 
         // The email is also the user name. Identity stores only a hash of the password.
         var user = new User { UserName = email, Email = email };
-        var result = await userManager.CreateAsync(user, request.Password);
+        IdentityResult result;
+        try
+        {
+            result = await userManager.CreateAsync(user, request.Password);
+        }
+        catch (DbUpdateException)
+        {
+            // Another request may have registered the same email after both our check above and Identity's own
+            // duplicate check, so the unique NormalizedEmail index rejected the insert. Re-check that the email
+            // now exists; if it does not, the error has another cause and is rethrown so it is not hidden.
+            if (await userManager.FindByEmailAsync(email) is null)
+            {
+                throw;
+            }
+
+            return RegisterResult.EmailAlreadyRegistered();
+        }
 
         if (result.Succeeded)
         {
             return RegisterResult.Success(new UserResponse(user.Id, email));
         }
 
-        // Another request may have registered the same email between our check and CreateAsync.
+        // Identity's own duplicate check (it runs inside CreateAsync, before saving) found the email.
+        // This covers a request that registered the email after our check above but before that one.
         if (result.Errors.Any(error => error.Code is nameof(IdentityErrorDescriber.DuplicateEmail)
             or nameof(IdentityErrorDescriber.DuplicateUserName)))
         {
