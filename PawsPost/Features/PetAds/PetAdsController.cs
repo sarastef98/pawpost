@@ -10,6 +10,18 @@ namespace PawsPost.Features.PetAds;
 [Authorize]
 public class PetAdsController(IPetAdService petAdService) : ControllerBase
 {
+    // Public on purpose: anyone can browse. The class-level [Authorize] still protects every other action.
+    [HttpGet]
+    [AllowAnonymous]
+    [ProducesResponseType<PetAdListResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ListAsync(
+        [FromQuery] ListPetAdsRequest request, CancellationToken cancellationToken)
+    {
+        var page = await petAdService.ListAsync(request, cancellationToken);
+        return Ok(page);
+    }
+
     [HttpPost]
     [ProducesResponseType<PetAdResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]

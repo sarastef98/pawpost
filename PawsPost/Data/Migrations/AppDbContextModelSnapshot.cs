@@ -143,6 +143,8 @@ namespace PawsPost.Data.Migrations
 
                     b.HasIndex("Type");
 
+                    b.HasIndex("Status", "CreatedAt");
+
                     b.ToTable("PetAds");
                 });
 

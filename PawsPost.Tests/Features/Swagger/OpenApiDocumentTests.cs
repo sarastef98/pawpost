@@ -85,6 +85,60 @@ public class OpenApiDocumentTests(PawsPostFactory factory) : IClassFixture<PawsP
         Assert.Contains("title", GetRequiredNames(schema));
     }
 
+    [Fact]
+    public async Task GetOpenApiDocument_PetAdsGet_HasPageSizeSpeciesAndTypeQueryParameters()
+    {
+        // Arrange
+        using var document = await GetOpenApiDocumentAsync();
+
+        // Act
+        var parameters = GetPetAdsGet(document).GetProperty("parameters").EnumerateArray().ToList();
+
+        // Assert
+        Assert.Equal(["page", "pageSize", "species", "type"], parameters.Select(p => p.GetProperty("name").GetString()).Order());
+        Assert.All(parameters, parameter =>
+        {
+            Assert.Equal("query", parameter.GetProperty("in").GetString());
+            Assert.False(parameter.TryGetProperty("required", out var required) && required.GetBoolean());
+        });
+    }
+
+    [Fact]
+    public async Task GetOpenApiDocument_PetAdsGet_ResponseReferencesPetAdListResponse()
+    {
+        // Arrange
+        using var document = await GetOpenApiDocumentAsync();
+
+        // Act
+        var ok = GetPetAdsGet(document).GetProperty("responses").GetProperty("200")
+            .GetProperty("content").GetProperty("application/json").GetProperty("schema");
+        var schema = GetSchema(document, "PetAdListResponse");
+
+        // Assert
+        Assert.Equal("#/components/schemas/PetAdListResponse", ok.GetProperty("$ref").GetString());
+        var names = schema.GetProperty("properties").EnumerateObject().Select(p => p.Name).Order().ToList();
+        Assert.Equal(["items", "page", "pageSize", "totalCount"], names);
+        Assert.Equal(["items", "page", "pageSize", "totalCount"], GetRequiredNames(schema).Order());
+    }
+
+    [Fact]
+    public async Task GetOpenApiDocument_PetAdListItemResponseSchema_HasCardFieldsAndNoOwnerId()
+    {
+        // Arrange
+        using var document = await GetOpenApiDocumentAsync();
+
+        // Act
+        var schema = GetSchema(document, "PetAdListItemResponse");
+
+        // Assert
+        var names = schema.GetProperty("properties").EnumerateObject().Select(p => p.Name).Order().ToList();
+        Assert.Equal(["createdAt", "id", "location", "price", "species", "title", "type"], names);
+        Assert.DoesNotContain("ownerId", names);
+    }
+
+    private static JsonElement GetPetAdsGet(JsonDocument document) =>
+        document.RootElement.GetProperty("paths").GetProperty("/api/pet-ads").GetProperty("get");
+
     private static JsonElement GetSchema(JsonDocument document, string name) =>
         document.RootElement.GetProperty("components").GetProperty("schemas").GetProperty(name);
 

@@ -1,4 +1,6 @@
+using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -68,6 +70,71 @@ public static class PetAdTestHelpers
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         return await db.PetAds.AsNoTracking().ToListAsync();
+    }
+
+    public static Task<HttpResponseMessage> GetPetAdsAsync(this HttpClient client, string? query = null)
+    {
+        return client.GetAsync(string.IsNullOrEmpty(query) ? PetAdsUrl : $"{PetAdsUrl}?{query}");
+    }
+
+    /// <summary>A PetAd with fixed values. Pass the owner id of a seeded user.</summary>
+    public static PetAd BuildPetAd(
+        Guid ownerId,
+        DateTime createdAt,
+        string title = "Friendly beagle",
+        PetAdType type = PetAdType.Adoption,
+        string species = "Dog",
+        decimal? price = null,
+        string? location = "Skopje",
+        PetAdStatus status = PetAdStatus.Active,
+        Guid? id = null)
+    {
+        return new PetAd
+        {
+            Id = id ?? Guid.NewGuid(),
+            Title = title,
+            Type = type,
+            Species = species,
+            Breed = "Beagle",
+            AgeInMonths = 12,
+            Description = "Friendly and healthy.",
+            Price = price,
+            Location = location,
+            Status = status,
+            OwnerId = ownerId,
+            CreatedAt = createdAt
+        };
+    }
+
+    /// <summary>Registers a user through the API and returns its id (the ads table needs a real owner).</summary>
+    public static async Task<Guid> SeedOwnerAsync(this WebApplicationFactory<Program> factory, string email)
+    {
+        using var client = factory.CreateApiClient();
+        await client.RegisterAsync(email);
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = await db.Users.AsNoTracking().SingleAsync(user => user.Email == email);
+        return user.Id;
+    }
+
+    /// <summary>Inserts ads straight into the database (the API can only create Active ads dated now).</summary>
+    public static async Task SeedAdsAsync(this WebApplicationFactory<Program> factory, params PetAd[] ads)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.PetAds.AddRange(ads);
+        await db.SaveChangesAsync();
+    }
+
+    public static async Task AssertBadRequestForOnlyAsync(HttpResponseMessage response, string field)
+    {
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+        Assert.NotNull(problem);
+        var error = Assert.Single(problem.Errors);
+        Assert.Equal(field, error.Key.TrimStart('$', '.'), ignoreCase: true);
+        Assert.Single(error.Value);
     }
 
     private static Dictionary<string, object?> Apply(Dictionary<string, object?> body, (string Key, object? Value)[] overrides)

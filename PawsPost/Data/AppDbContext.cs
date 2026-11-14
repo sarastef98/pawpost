@@ -34,6 +34,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityUser
             ad.HasIndex(petAd => petAd.Status);
             ad.HasIndex(petAd => petAd.CreatedAt);
             ad.HasIndex(petAd => petAd.OwnerId);
+            ad.HasIndex(petAd => new { petAd.Status, petAd.CreatedAt });
         });
 
         // Identity's default email index is not unique. The database must also guarantee unique emails.
