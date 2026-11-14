@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
+import LoginPage from './features/auth/LoginPage'
 import HomePage from './features/home/HomePage'
 import StyleGuidePage from './features/styleguide/StyleGuidePage'
 
@@ -8,6 +9,7 @@ function App() {
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/styleguide" element={<StyleGuidePage />} />
       </Route>
     </Routes>
