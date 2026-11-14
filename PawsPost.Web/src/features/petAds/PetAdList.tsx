@@ -134,8 +134,10 @@ export default function PetAdList() {
     )
   }
 
-  // The live region keeps its last text while loading, so paging with the same
-  // count announces nothing new. It only changes once a result is settled.
+  // The live region keeps its last text while the next page loads, so paging
+  // with the same count announces nothing new. When the filters change it is
+  // emptied while loading, so the new count is announced even when it is the
+  // same number. It only gets new text once a result is settled.
   let settledSummary: string | null = null
   if (state.status !== 'loading' && !outOfRange) {
     settledSummary = ''
@@ -144,11 +146,16 @@ export default function PetAdList() {
       settledSummary = `${count} ${count === 1 ? 'ad' : 'ads'} found`
     }
   }
-  const [announced, setAnnounced] = useState('')
-  if (settledSummary !== null && settledSummary !== announced) {
-    setAnnounced(settledSummary)
+  const filterKey = JSON.stringify([type, species])
+  const [announced, setAnnounced] = useState({ text: '', filterKey })
+  if (
+    settledSummary !== null &&
+    (settledSummary !== announced.text || filterKey !== announced.filterKey)
+  ) {
+    setAnnounced({ text: settledSummary, filterKey })
   }
-  const summary = settledSummary ?? announced
+  const summary =
+    settledSummary ?? (announced.filterKey === filterKey ? announced.text : '')
 
   return (
     <section className="flex flex-col gap-4">

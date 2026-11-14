@@ -623,6 +623,45 @@ describe('PetAdList', () => {
       expect(screen.queryByText('45 ads found')).not.toBeInTheDocument()
     })
 
+    it('keeps the count in the live region while paging with filters set', async () => {
+      get.mockResolvedValueOnce(okResult(listBody([ad()], 45)))
+      get.mockReturnValueOnce(new Promise(() => {}))
+      renderList('/?type=Sale&species=Dog')
+      await screen.findByText('Friendly Rex')
+
+      await userEvent.click(screen.getByRole('button', { name: 'Next' }))
+
+      expect(screen.getByRole('status')).toHaveTextContent('Loading')
+      expect(screen.getByText('45 ads found')).toHaveAttribute(
+        'aria-live',
+        'polite',
+      )
+    })
+
+    it('announces the count again when new filters give the same count', async () => {
+      const filtered = deferred<ReturnType<typeof okResult>>()
+      get.mockResolvedValueOnce(okResult(listBody([ad()], 5)))
+      get.mockReturnValueOnce(filtered.promise)
+      renderList()
+      await screen.findByText('5 ads found')
+
+      await userEvent.type(screen.getByLabelText('Species'), 'Cat{Enter}')
+
+      await waitFor(() => expect(lastQuery().species).toBe('Cat'))
+      expect(screen.getByRole('status')).toHaveTextContent('Loading')
+      expect(screen.queryByText('5 ads found')).not.toBeInTheDocument()
+
+      await act(async () =>
+        filtered.resolve(okResult(listBody([ad({ title: 'Kitty' })], 5))),
+      )
+
+      expect(await screen.findByText('Kitty')).toBeInTheDocument()
+      expect(screen.getByText('5 ads found')).toHaveAttribute(
+        'aria-live',
+        'polite',
+      )
+    })
+
     it('empties the live region when a later request fails', async () => {
       get.mockResolvedValueOnce(okResult(listBody([ad()], 45)))
       get.mockResolvedValueOnce(failResult(500))
