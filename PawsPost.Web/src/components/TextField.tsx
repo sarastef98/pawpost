@@ -31,7 +31,7 @@ export default function TextField({
       <input
         {...props}
         id={id}
-        aria-invalid={errorText ? true : undefined}
+        aria-invalid={errorText ? true : props['aria-invalid']}
         aria-describedby={describedBy}
         className={`min-h-11 w-full rounded-card border bg-surface px-3 py-2 text-base text-text ${errorText ? 'border-danger' : 'border-border'} ${className}`}
       />

@@ -51,6 +51,24 @@ describe('TextField', () => {
     expect(screen.getByText('Email is required')).toBeInTheDocument()
   })
 
+  it('keeps the caller aria-invalid when there is no error text', () => {
+    render(<TextField label="Email" aria-invalid="true" />)
+
+    expect(screen.getByLabelText('Email')).toBeInvalid()
+  })
+
+  it('marks the input invalid when there is error text even if the caller says it is valid', () => {
+    render(
+      <TextField
+        label="Email"
+        errorText="Email is required"
+        aria-invalid="false"
+      />,
+    )
+
+    expect(screen.getByLabelText('Email')).toBeInvalid()
+  })
+
   it('keeps the helper text linked when a caller passes its own aria-describedby', () => {
     render(
       <>
