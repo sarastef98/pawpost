@@ -47,7 +47,7 @@ public class PetAdService(AppDbContext dbContext, TimeProvider timeProvider) : I
             query = query.Where(petAd => EF.Functions.Collate(petAd.Species, "NOCASE") == species);
         }
 
-        var type = request.ParsedType;
+        var type = request.GetParsedType();
         if (type is not null)
         {
             query = query.Where(petAd => petAd.Type == type);

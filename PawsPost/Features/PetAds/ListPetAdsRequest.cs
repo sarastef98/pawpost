@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc;
 using PawsPost.Data;
 
 namespace PawsPost.Features.PetAds;
@@ -8,17 +9,22 @@ public class ListPetAdsRequest : IValidatableObject
     public const int DefaultPageSize = 20;
     public const int MaxPageSize = 100;
 
+    [FromQuery(Name = "page")]
     public int Page { get; init; } = 1;
 
+    [FromQuery(Name = "pageSize")]
     public int PageSize { get; init; } = DefaultPageSize;
 
+    [FromQuery(Name = "species")]
     public string? Species { get; init; }
 
     // Bound as a string on purpose: the enum binder would accept numbers.
+    [FromQuery(Name = "type")]
     public string? Type { get; init; }
 
     // The parsed type filter, or null when no filter is given or the value is not valid.
-    public PetAdType? ParsedType => ParseType(Type);
+    // A method, not a property, so it is not a query parameter and not in the OpenAPI document.
+    public PetAdType? GetParsedType() => ParseType(Type);
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
@@ -41,7 +47,7 @@ public class ListPetAdsRequest : IValidatableObject
                 [nameof(Species)]);
         }
 
-        if (Type is not null && ParsedType is null)
+        if (Type is not null && GetParsedType() is null)
         {
             yield return new ValidationResult(
                 "The Type field must be Adoption or Sale.", [nameof(Type)]);
