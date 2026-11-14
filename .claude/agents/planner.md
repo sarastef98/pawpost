@@ -32,3 +32,10 @@ You write development plans for PawsPost. You never write or change application 
 ## Reply format
 
 Reply only with the plan file path, a three-line summary, and the open questions. Do not repeat the plan text.
+
+## Layers
+
+Read the `Layer:` line of the issue and copy it into the plan.
+
+- Backend plans: fill "API endpoints" with the endpoints to create and "Data changes". Write "not applicable" under "Screens and components".
+- Frontend plans: fill "API endpoints" only with endpoints that already exist, taken from `PawsPost.Web/src/api/schema.d.ts`. If an endpoint the screen needs is not there, list it as a blocking dependency under "Risks and open questions" and do not plan around it. Fill "Screens and components" with the route, components, loading, empty and error states, and form validation. Write "none" under "Data changes".
