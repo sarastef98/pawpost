@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Mvc;
 using PawsPost.Features.Auth;
 using PawsPost.Tests.Infrastructure;
 
@@ -87,6 +88,40 @@ public class LoginTests
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Login_EmailTooLong_Returns400()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = factory.CreateApiClient();
+        var email = new string('a', 250) + "@x.com";
+
+        // Act
+        var response = await client.LoginAsync(email);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+        Assert.True(body?.Errors.ContainsKey(nameof(LoginRequest.Email)));
+    }
+
+    [Fact]
+    public async Task Login_PasswordTooLong_Returns400()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = factory.CreateApiClient();
+        var password = "Aa1!" + new string('x', 125);
+
+        // Act
+        var response = await client.LoginAsync("a@x.com", password);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+        Assert.True(body?.Errors.ContainsKey(nameof(LoginRequest.Password)));
     }
 
     [Fact]
