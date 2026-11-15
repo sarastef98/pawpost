@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, Navigate, useLocation, useParams } from 'react-router-dom'
+import {
+  Link,
+  Navigate,
+  useLocation,
+  useNavigate,
+  useParams,
+} from 'react-router-dom'
 import EmptyState from '../../components/EmptyState'
 import ErrorMessage from '../../components/ErrorMessage'
 import Spinner from '../../components/Spinner'
@@ -20,11 +26,22 @@ function readNotice(state: unknown): string | null {
 }
 
 // A short message passed through router state, for example after posting an
-// ad. The empty region renders first and the text is filled in on the next
-// tick, so screen readers announce it.
+// ad. The message is read once and the router state is then cleared, so a
+// reload or a later visit to this history entry does not show it again.
+// The empty region renders first and the text is filled in on the next tick,
+// because screen readers do not reliably announce a live region that is
+// inserted with its text already in it.
 function Notice() {
-  const notice = readNotice(useLocation().state)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [notice] = useState(() => readNotice(location.state))
   const [shown, setShown] = useState('')
+  const { pathname, search, hash } = location
+
+  useEffect(() => {
+    if (notice === null) return
+    void navigate({ pathname, search, hash }, { replace: true, state: null })
+  }, [notice, navigate, pathname, search, hash])
 
   useEffect(() => {
     const timer = setTimeout(() => setShown(notice ?? ''), 0)

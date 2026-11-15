@@ -1,6 +1,12 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
 import { client } from '../../api/client'
@@ -320,6 +326,29 @@ describe('PetAdDetailsPage', () => {
   })
 })
 
+function StateProbe() {
+  const state: unknown = useLocation().state
+  return <p>Router state: {JSON.stringify(state ?? null)}</p>
+}
+
+function LeaveButton() {
+  const navigate = useNavigate()
+  return (
+    <button type="button" onClick={() => void navigate('/elsewhere')}>
+      Leave
+    </button>
+  )
+}
+
+function BackButton() {
+  const navigate = useNavigate()
+  return (
+    <button type="button" onClick={() => void navigate(-1)}>
+      Go back
+    </button>
+  )
+}
+
 describe('PetAdDetailsPage notice', () => {
   beforeEach(() => {
     get.mockReset()
@@ -337,7 +366,17 @@ describe('PetAdDetailsPage notice', () => {
       <AuthContext.Provider value={value}>
         <MemoryRouter initialEntries={[{ pathname: '/pet-ads/ad-1', state }]}>
           <Routes>
-            <Route path="/pet-ads/:id" element={<PetAdDetailsPage />} />
+            <Route
+              path="/pet-ads/:id"
+              element={
+                <>
+                  <PetAdDetailsPage />
+                  <StateProbe />
+                  <LeaveButton />
+                </>
+              }
+            />
+            <Route path="/elsewhere" element={<BackButton />} />
           </Routes>
         </MemoryRouter>
       </AuthContext.Provider>,
@@ -350,6 +389,31 @@ describe('PetAdDetailsPage notice', () => {
 
     expect(await screen.findByText('Your ad is live.')).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent('Your ad is live.')
+  })
+
+  it('clears the router state after reading the notice', async () => {
+    get.mockResolvedValue(okResult(adBody()))
+    renderWithState({ notice: 'Your ad is live.' })
+
+    expect(await screen.findByText('Router state: null')).toBeInTheDocument()
+    expect(await screen.findByText('Your ad is live.')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Your ad is live.')
+  })
+
+  it('shows no notice when the page is opened again after the state was cleared', async () => {
+    get.mockResolvedValue(okResult(adBody()))
+    const user = userEvent.setup()
+    renderWithState({ notice: 'Your ad is live.' })
+    await screen.findByText('Your ad is live.')
+    await screen.findByText('Router state: null')
+
+    await user.click(screen.getByRole('button', { name: 'Leave' }))
+    await user.click(await screen.findByRole('button', { name: 'Go back' }))
+
+    await screen.findByRole('heading', { level: 1, name: 'Friendly Rex' })
+    expect(screen.getByText('Router state: null')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
+    expect(screen.queryByText('Your ad is live.')).not.toBeInTheDocument()
   })
 
   it('shows no notice text without router state', async () => {
