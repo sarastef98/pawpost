@@ -3,6 +3,7 @@ import Layout from './components/Layout'
 import LoginPage from './features/auth/LoginPage'
 import RegisterPage from './features/auth/RegisterPage'
 import HomePage from './features/home/HomePage'
+import PetAdDetailsPage from './features/petAds/PetAdDetailsPage'
 import StyleGuidePage from './features/styleguide/StyleGuidePage'
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/pet-ads/:id" element={<PetAdDetailsPage />} />
         <Route path="/styleguide" element={<StyleGuidePage />} />
       </Route>
     </Routes>
