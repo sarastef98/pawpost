@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { client } from '../../api/client'
-import { toPetAdDetails } from './petAdDetails'
-import type { PetAdDetails } from './petAdDetails'
+import { toPetAdDetails } from './petAdDetailsData'
+import type { PetAdDetails } from './petAdDetailsData'
 
 type Outcome =
   | { status: 'unauthorized' }

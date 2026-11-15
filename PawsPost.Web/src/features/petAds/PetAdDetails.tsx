@@ -2,8 +2,8 @@ import type { Ref } from 'react'
 import Badge from '../../components/Badge'
 import Card from '../../components/Card'
 import { formatPrice } from './formatPrice'
-import { formatAge } from './petAdDetails'
-import type { PetAdDetails as PetAdDetailsData } from './petAdDetails'
+import { formatAge } from './petAdDetailsData'
+import type { PetAdDetails as PetAdDetailsData } from './petAdDetailsData'
 
 type PetAdDetailsProps = {
   ad: PetAdDetailsData
