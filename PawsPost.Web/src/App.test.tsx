@@ -87,6 +87,19 @@ describe('App', () => {
     ).toBeInTheDocument()
   })
 
+  it('shows the ad details page inside the layout at the details route', async () => {
+    renderAt('/pet-ads/ad-1')
+
+    expect(screen.getByRole('banner')).toBeInTheDocument()
+    expect(screen.getByRole('main')).toBeInTheDocument()
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument()
+    // The mocked API answers "nobody is logged in", so the guard sends the
+    // visitor on to the login page, which proves the route reached the page.
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Log in' }),
+    ).toBeInTheDocument()
+  })
+
   it('goes from the style guide back to the home page when the logo is clicked', async () => {
     const user = userEvent.setup()
     renderAt('/styleguide')
