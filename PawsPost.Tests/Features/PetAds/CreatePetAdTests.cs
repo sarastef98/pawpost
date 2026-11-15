@@ -30,7 +30,7 @@ public class CreatePetAdTests
         Assert.Equal(PetAdType.Adoption, ad.Type);
         Assert.Equal(PetAdStatus.Active, ad.Status);
         Assert.Null(ad.Price);
-        Assert.Equal("Dog", ad.Species);
+        Assert.Equal(PetSpecies.Dog, ad.Species);
         Assert.Equal("Beagle", ad.Breed);
         Assert.Equal(24, ad.AgeInMonths);
         Assert.Equal("Friendly and healthy.", ad.Description);
@@ -287,7 +287,7 @@ public class CreatePetAdTests
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var ad = await response.Content.ReadFromJsonAsync<PetAdResponse>();
-        Assert.Equal("Dog", ad?.Species);
+        Assert.Equal(PetSpecies.Dog, ad?.Species);
         Assert.Equal("Beagle", ad?.Breed);
         Assert.Equal("Nice", ad?.Description);
         Assert.Equal("Skopje", ad?.Location);

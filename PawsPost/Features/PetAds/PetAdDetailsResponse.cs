@@ -8,7 +8,7 @@ public record PetAdDetailsResponse(
     Guid Id,
     string Title,
     [property: JsonConverter(typeof(JsonStringEnumConverter<PetAdType>))] PetAdType Type,
-    string Species,
+    [property: JsonConverter(typeof(JsonStringEnumConverter<PetSpecies>))] PetSpecies Species,
     string? Breed,
     int AgeInMonths,
     string Description,

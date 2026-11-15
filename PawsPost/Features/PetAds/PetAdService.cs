@@ -31,7 +31,7 @@ public class PetAdService(AppDbContext dbContext, TimeProvider timeProvider) : I
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return new PetAdResponse(
-            ad.Id, ad.Title, ad.Type, ad.Species.ToString(), ad.Breed, ad.AgeInMonths, ad.Description,
+            ad.Id, ad.Title, ad.Type, ad.Species, ad.Breed, ad.AgeInMonths, ad.Description,
             ad.Price, ad.Location, ad.Status, ad.OwnerId, ad.CreatedAt);
     }
 
@@ -86,7 +86,7 @@ public class PetAdService(AppDbContext dbContext, TimeProvider timeProvider) : I
         // SQLite returns DateTime with Kind Unspecified. Mark it as UTC so the JSON ends with "Z".
         var items = rows
             .Select(row => new PetAdListItemResponse(
-                row.Id, row.Title, row.Type, row.Species.ToString(), row.Price, row.Location,
+                row.Id, row.Title, row.Type, row.Species, row.Price, row.Location,
                 DateTime.SpecifyKind(row.CreatedAt, DateTimeKind.Utc)))
             .ToList();
 
@@ -122,7 +122,7 @@ public class PetAdService(AppDbContext dbContext, TimeProvider timeProvider) : I
 
         // SQLite returns DateTime with Kind Unspecified. Mark it as UTC so the JSON ends with "Z".
         return new PetAdDetailsResponse(
-            row.Id, row.Title, row.Type, row.Species.ToString(), row.Breed, row.AgeInMonths, row.Description,
+            row.Id, row.Title, row.Type, row.Species, row.Breed, row.AgeInMonths, row.Description,
             row.Price, row.Location, row.Status, DateTime.SpecifyKind(row.CreatedAt, DateTimeKind.Utc));
     }
 
