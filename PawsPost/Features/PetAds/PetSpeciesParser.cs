@@ -5,9 +5,11 @@ namespace PawsPost.Features.PetAds;
 public static class PetSpeciesParser
 {
     // Accepts only the names of PetSpecies, in any case, ignoring surrounding spaces. Numbers are rejected.
-    public static PetSpecies? Parse(string? value)
+    public static PetSpecies? Parse(string? value) => ParseExact(value?.Trim());
+
+    // Same as Parse, but the value is not trimmed, so padded names are rejected.
+    public static PetSpecies? ParseExact(string? trimmed)
     {
-        var trimmed = value?.Trim();
         if (string.IsNullOrEmpty(trimmed))
         {
             return null;

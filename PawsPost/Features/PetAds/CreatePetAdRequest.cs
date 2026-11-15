@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using PawsPost.Data;
 
@@ -91,12 +92,30 @@ public class CreatePetAdRequest : IValidatableObject
     private static ValidationResult TooLong(string field, int maxLength) =>
         new($"The {field} field must be at most {maxLength} characters.", [field]);
 
-    // Accepts only the names of PetSpecies, in any case. Numbers are rejected.
-    private sealed class StrictPetSpeciesConverter : JsonStringEnumConverter<PetSpecies>
+    // Accepts only the exact names of PetSpecies, in any case. No trimming, no combinations, no numbers.
+    private sealed class StrictPetSpeciesConverter : JsonConverter<PetSpecies?>
     {
-        public StrictPetSpeciesConverter()
-            : base(namingPolicy: null, allowIntegerValues: false)
+        public override PetSpecies? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
+            if (reader.TokenType != JsonTokenType.String)
+            {
+                throw new JsonException("Species must be a string.");
+            }
+
+            return PetSpeciesParser.ParseExact(reader.GetString())
+                ?? throw new JsonException("Unknown species.");
+        }
+
+        public override void Write(Utf8JsonWriter writer, PetSpecies? value, JsonSerializerOptions options)
+        {
+            if (value is null)
+            {
+                writer.WriteNullValue();
+            }
+            else
+            {
+                writer.WriteStringValue(value.Value.ToString());
+            }
         }
     }
 
