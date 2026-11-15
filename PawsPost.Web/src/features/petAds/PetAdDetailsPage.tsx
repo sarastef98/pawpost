@@ -28,7 +28,14 @@ export default function PetAdDetailsPage() {
   return (
     <section className="flex flex-col gap-4">
       <BackLink />
-      {status === 'loading' ? <Spinner /> : <LoadedAd id={id} />}
+      {status === 'loading' ? (
+        <>
+          <h1 className="text-2xl">Ad details</h1>
+          <Spinner />
+        </>
+      ) : (
+        <LoadedAd id={id} />
+      )}
     </section>
   )
 }

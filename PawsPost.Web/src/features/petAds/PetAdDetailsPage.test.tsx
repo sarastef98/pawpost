@@ -177,6 +177,14 @@ describe('PetAdDetailsPage', () => {
       expect(get).not.toHaveBeenCalled()
     })
 
+    it('shows the neutral heading while the login state is loading', () => {
+      renderPage('loading')
+
+      expect(
+        screen.getByRole('heading', { level: 1, name: 'Ad details' }),
+      ).toBeInTheDocument()
+    })
+
     it('redirects to the login page when the API answers 401', async () => {
       get.mockResolvedValue(failResult(401))
       renderPage()
