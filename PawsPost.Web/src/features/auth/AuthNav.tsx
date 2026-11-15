@@ -53,6 +53,9 @@ export default function AuthNav() {
           {LOGOUT_FAILED_MESSAGE}
         </p>
       )}
+      <Link to="/pet-ads/new" className={linkClasses}>
+        Post an ad
+      </Link>
       <Button variant="secondary" onClick={handleLogout} disabled={busy}>
         Log out
       </Button>

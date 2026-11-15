@@ -29,6 +29,7 @@ function renderHeader(url = '/') {
           <Route element={<Layout />}>
             <Route path="/" element={<p>Home page</p>} />
             <Route path="/other" element={<p>Other page</p>} />
+            <Route path="/pet-ads/new" element={<p>Post page</p>} />
             <Route path="/login" element={<p>Login page</p>} />
             <Route path="/register" element={<p>Register page</p>} />
           </Route>
@@ -197,6 +198,9 @@ describe('AuthNav', () => {
     await screen.findByRole('button', { name: 'Log out' })
 
     await user.tab()
+    expect(screen.getByRole('link', { name: 'PawsPost' })).toHaveFocus()
+    await user.tab()
+    expect(screen.getByRole('link', { name: 'Post an ad' })).toHaveFocus()
     await user.tab()
 
     expect(screen.getByRole('button', { name: 'Log out' })).toHaveFocus()
@@ -224,5 +228,44 @@ describe('AuthNav', () => {
       await screen.findByRole('button', { name: 'Log out' }),
     ).toBeInTheDocument()
     expect(screen.getByText('Register page')).toBeInTheDocument()
+  })
+})
+
+describe('AuthNav post an ad link', () => {
+  it('links to the create page when logged in', async () => {
+    get.mockResolvedValue(okResult(testUser))
+
+    renderHeader()
+
+    expect(
+      await screen.findByRole('link', { name: 'Post an ad' }),
+    ).toHaveAttribute('href', '/pet-ads/new')
+  })
+
+  it('opens the create page when clicked', async () => {
+    const user = userEvent.setup()
+    get.mockResolvedValue(okResult(testUser))
+    renderHeader()
+
+    await user.click(await screen.findByRole('link', { name: 'Post an ad' }))
+
+    expect(screen.getByText('Post page')).toBeInTheDocument()
+  })
+
+  it('is not shown when logged out', async () => {
+    get.mockResolvedValue(failResult(401))
+
+    renderHeader()
+
+    await screen.findByRole('link', { name: 'Log in' })
+    expect(screen.queryByRole('link', { name: 'Post an ad' })).toBeNull()
+  })
+
+  it('is not shown while the start check runs', () => {
+    get.mockReturnValue(new Promise(() => {}))
+
+    renderHeader()
+
+    expect(screen.queryByRole('link', { name: 'Post an ad' })).toBeNull()
   })
 })
