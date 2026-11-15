@@ -136,6 +136,9 @@ describe('App not-found route', () => {
     renderAt('/')
 
     expect(
+      screen.getByRole('heading', { level: 1, name: 'Welcome to PawsPost' }),
+    ).toBeInTheDocument()
+    expect(
       screen.queryByRole('heading', { name: 'Page not found' }),
     ).not.toBeInTheDocument()
   })
@@ -143,6 +146,9 @@ describe('App not-found route', () => {
   it('does not show the not-found page at the style guide route', () => {
     renderAt('/styleguide')
 
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Style guide' }),
+    ).toBeInTheDocument()
     expect(
       screen.queryByRole('heading', { name: 'Page not found' }),
     ).not.toBeInTheDocument()
