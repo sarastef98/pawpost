@@ -319,3 +319,44 @@ describe('PetAdDetailsPage', () => {
     })
   })
 })
+
+describe('PetAdDetailsPage notice', () => {
+  beforeEach(() => {
+    get.mockReset()
+  })
+
+  function renderWithState(state?: unknown) {
+    const value = {
+      status: 'loggedIn' as const,
+      user: { id: 'u1', email: 'sara@example.com' },
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+    }
+    render(
+      <AuthContext.Provider value={value}>
+        <MemoryRouter initialEntries={[{ pathname: '/pet-ads/ad-1', state }]}>
+          <Routes>
+            <Route path="/pet-ads/:id" element={<PetAdDetailsPage />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>,
+    )
+  }
+
+  it('shows the notice from router state in a status region', async () => {
+    get.mockResolvedValue(okResult(adBody()))
+    renderWithState({ notice: 'Your ad is live.' })
+
+    expect(await screen.findByText('Your ad is live.')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Your ad is live.')
+  })
+
+  it('shows no notice text without router state', async () => {
+    get.mockResolvedValue(okResult(adBody()))
+    renderWithState()
+
+    await screen.findByRole('heading', { level: 1, name: 'Friendly Rex' })
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
+  })
+})

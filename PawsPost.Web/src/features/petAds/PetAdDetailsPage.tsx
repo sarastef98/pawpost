@@ -1,11 +1,42 @@
-import { useEffect, useRef } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom'
 import EmptyState from '../../components/EmptyState'
 import ErrorMessage from '../../components/ErrorMessage'
 import Spinner from '../../components/Spinner'
 import { useAuth } from '../auth/useAuth'
 import PetAdDetails from './PetAdDetails'
 import { usePetAd } from './usePetAd'
+
+function readNotice(state: unknown): string | null {
+  if (
+    typeof state === 'object' &&
+    state !== null &&
+    'notice' in state &&
+    typeof state.notice === 'string'
+  ) {
+    return state.notice
+  }
+  return null
+}
+
+// A short message passed through router state, for example after posting an
+// ad. The empty region renders first and the text is filled in on the next
+// tick, so screen readers announce it.
+function Notice() {
+  const notice = readNotice(useLocation().state)
+  const [shown, setShown] = useState('')
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShown(notice ?? ''), 0)
+    return () => clearTimeout(timer)
+  }, [notice])
+
+  return (
+    <p role="status" className={shown ? 'text-base text-success' : 'sr-only'}>
+      {shown}
+    </p>
+  )
+}
 
 const linkClasses = 'font-semibold text-primary underline'
 
@@ -60,7 +91,12 @@ function LoadedAd({ id }: { id: string }) {
 
   if (state.status === 'unauthorized') return <Navigate to="/login" replace />
   if (state.status === 'success') {
-    return <PetAdDetails ad={state.ad} headingRef={headingRef} />
+    return (
+      <>
+        <Notice />
+        <PetAdDetails ad={state.ad} headingRef={headingRef} />
+      </>
+    )
   }
 
   return (
