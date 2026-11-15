@@ -5,10 +5,8 @@ type Response = components['schemas']['PetAdDetailsResponse']
 
 // The fields the page shows. The API sends numbers as number or string, and
 // breed, price and location may be null, so they are converted here.
-export type PetAdDetails = Pick<
-  Response,
-  'id' | 'title' | 'species' | 'description'
-> & {
+export type PetAdDetails = Pick<Response, 'id' | 'title' | 'description'> & {
+  species: string
   type: string
   breed: string | null
   ageInMonths: number | null

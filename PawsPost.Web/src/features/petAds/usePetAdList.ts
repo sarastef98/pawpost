@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { client } from '../../api/client'
+import type { components } from '../../api/schema'
 import { PAGE_SIZE, toListData } from './petAdListQuery'
 import type { ListQuery, PetAdListData } from './petAdListQuery'
 
@@ -36,7 +37,10 @@ export function usePetAdList(query: ListQuery) {
               page,
               pageSize: PAGE_SIZE,
               ...(type ? { type } : {}),
-              ...(species ? { species } : {}),
+              // The filter is free text; the server validates it.
+              ...(species
+                ? { species: species as components['schemas']['PetSpecies'] }
+                : {}),
             },
           },
         })
