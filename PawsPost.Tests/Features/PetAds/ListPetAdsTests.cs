@@ -17,9 +17,9 @@ public class ListPetAdsTests
         // Arrange
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
-        var first = BuildPetAd(ownerId, Day1, title: "Old dog", species: "Dog");
+        var first = BuildPetAd(ownerId, Day1, title: "Old dog", species: PetSpecies.Dog);
         var second = BuildPetAd(ownerId, Day1.AddDays(1), title: "Kitten for sale", type: PetAdType.Sale,
-            species: "Cat", price: 99.5m, location: "Bitola");
+            species: PetSpecies.Cat, price: 99.5m, location: "Bitola");
         await factory.SeedAdsAsync(first, second);
         var client = factory.CreateApiClient();
 
@@ -245,8 +245,8 @@ public class ListPetAdsTests
         // Arrange
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
-        var dog = BuildPetAd(ownerId, Day1, species: "Dog");
-        await factory.SeedAdsAsync(dog, BuildPetAd(ownerId, Day1, species: "Cat"));
+        var dog = BuildPetAd(ownerId, Day1, species: PetSpecies.Dog);
+        await factory.SeedAdsAsync(dog, BuildPetAd(ownerId, Day1, species: PetSpecies.Cat));
         var client = factory.CreateApiClient();
 
         // Act
@@ -258,31 +258,19 @@ public class ListPetAdsTests
     }
 
     [Fact]
-    public async Task ListPetAds_KnownLimitNonAsciiSpeciesInDifferentCase_DoesNotMatch()
+    public async Task ListPetAds_NonAsciiSpecies_Returns400WithOnlyThatField()
     {
-        // Records the accepted limit from plan decision 3: case is ignored only for ASCII letters.
-        // Arrange
+        // Arrange (free text is no longer a valid filter, even for a name that was once stored as legacy text)
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
-        var dog = BuildPetAd(ownerId, Day1, species: "Dog");
-        var cyrillicDog = BuildPetAd(ownerId, Day1.AddDays(1), species: "Куче");
-        await factory.SeedAdsAsync(dog, cyrillicDog);
+        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: PetSpecies.Other));
         var client = factory.CreateApiClient();
 
         // Act
-        var asciiResponse = await client.GetPetAdsAsync("species=dog");
-        var exactCaseResponse = await client.GetPetAdsAsync($"species={Uri.EscapeDataString("Куче")}");
-        var cyrillicResponse = await client.GetPetAdsAsync($"species={Uri.EscapeDataString("куче")}");
+        var response = await client.GetPetAdsAsync($"species={Uri.EscapeDataString("куче")}");
 
         // Assert
-        using var asciiJson = await ReadJsonAsync(asciiResponse);
-        Assert.Equal([dog.Id], ItemIds(asciiJson));
-        using var exactCaseJson = await ReadJsonAsync(exactCaseResponse);
-        Assert.Equal([cyrillicDog.Id], ItemIds(exactCaseJson));
-        Assert.Equal(HttpStatusCode.OK, cyrillicResponse.StatusCode);
-        using var cyrillicJson = await ReadJsonAsync(cyrillicResponse);
-        Assert.Empty(ItemIds(cyrillicJson));
-        Assert.Equal(0, cyrillicJson.RootElement.GetProperty("totalCount").GetInt32());
+        await AssertBadRequestForOnlyAsync(response, "species");
     }
 
     [Fact]
@@ -291,7 +279,7 @@ public class ListPetAdsTests
         // Arrange
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
-        var dog = BuildPetAd(ownerId, Day1, species: "Dog");
+        var dog = BuildPetAd(ownerId, Day1, species: PetSpecies.Dog);
         await factory.SeedAdsAsync(dog);
         var client = factory.CreateApiClient();
 
@@ -304,22 +292,19 @@ public class ListPetAdsTests
     }
 
     [Fact]
-    public async Task ListPetAds_SpeciesIsOnlyPartOfStoredValue_DoesNotMatch()
+    public async Task ListPetAds_SpeciesIsOnlyPartOfAName_Returns400WithOnlyThatField()
     {
         // Arrange
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
-        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: "Dog"));
+        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: PetSpecies.Dog));
         var client = factory.CreateApiClient();
 
         // Act
         var response = await client.GetPetAdsAsync("species=Do");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        using var json = await ReadJsonAsync(response);
-        Assert.Empty(ItemIds(json));
-        Assert.Equal(0, json.RootElement.GetProperty("totalCount").GetInt32());
+        await AssertBadRequestForOnlyAsync(response, "species");
     }
 
     [Theory]
@@ -330,7 +315,7 @@ public class ListPetAdsTests
         // Arrange
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
-        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: "Dog"), BuildPetAd(ownerId, Day1.AddDays(1), species: "Cat"));
+        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: PetSpecies.Dog), BuildPetAd(ownerId, Day1.AddDays(1), species: PetSpecies.Cat));
         var client = factory.CreateApiClient();
 
         // Act
@@ -346,14 +331,13 @@ public class ListPetAdsTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task ListPetAds_SpeciesAtMaxLength_Returns200(bool padWithSpaces)
+    public async Task ListPetAds_LongUnknownSpecies_Returns400WithOnlyThatField(bool padWithSpaces)
     {
         // Arrange
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
         var species = new string('a', 50);
-        var ad = BuildPetAd(ownerId, Day1, species: species);
-        await factory.SeedAdsAsync(ad);
+        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: PetSpecies.Other));
         var client = factory.CreateApiClient();
         var query = padWithSpaces ? $"species=%20%20{species}%20%20" : $"species={species}";
 
@@ -361,9 +345,7 @@ public class ListPetAdsTests
         var response = await client.GetPetAdsAsync(query);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        using var json = await ReadJsonAsync(response);
-        Assert.Equal([ad.Id], ItemIds(json));
+        await AssertBadRequestForOnlyAsync(response, "species");
     }
 
     [Fact]
@@ -429,11 +411,11 @@ public class ListPetAdsTests
         // Arrange
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
-        var match = BuildPetAd(ownerId, Day1, species: "Dog", type: PetAdType.Sale, price: 10m);
+        var match = BuildPetAd(ownerId, Day1, species: PetSpecies.Dog, type: PetAdType.Sale, price: 10m);
         await factory.SeedAdsAsync(
             match,
-            BuildPetAd(ownerId, Day1, species: "Dog"),
-            BuildPetAd(ownerId, Day1, species: "Cat", type: PetAdType.Sale, price: 10m));
+            BuildPetAd(ownerId, Day1, species: PetSpecies.Dog),
+            BuildPetAd(ownerId, Day1, species: PetSpecies.Cat, type: PetAdType.Sale, price: 10m));
         var client = factory.CreateApiClient();
 
         // Act
@@ -450,11 +432,11 @@ public class ListPetAdsTests
         // Arrange
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
-        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: "Dog"));
+        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: PetSpecies.Dog));
         var client = factory.CreateApiClient();
 
         // Act
-        var response = await client.GetPetAdsAsync("species=Parrot");
+        var response = await client.GetPetAdsAsync("species=Cat");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -469,9 +451,9 @@ public class ListPetAdsTests
         // Arrange
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
-        var dogs = Enumerable.Range(0, 3).Select(day => BuildPetAd(ownerId, Day1.AddDays(day), species: "Dog")).ToArray();
+        var dogs = Enumerable.Range(0, 3).Select(day => BuildPetAd(ownerId, Day1.AddDays(day), species: PetSpecies.Dog)).ToArray();
         await factory.SeedAdsAsync(dogs);
-        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: "Cat"), BuildPetAd(ownerId, Day1, species: "Cat"));
+        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: PetSpecies.Cat), BuildPetAd(ownerId, Day1, species: PetSpecies.Cat));
         var client = factory.CreateApiClient();
 
         // Act
@@ -776,16 +758,117 @@ public class ListPetAdsTests
     [Theory]
     [InlineData("species=%00")]
     [InlineData("species=Dog%00")]
-    public async Task ListPetAds_SpeciesWithNullCharacter_Returns200WithNoMatches(string query)
+    public async Task ListPetAds_SpeciesWithNullCharacter_Returns400WithOnlyThatField(string query)
     {
         // Arrange
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
-        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: "Dog"));
+        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: PetSpecies.Dog));
         var client = factory.CreateApiClient();
 
         // Act
         var response = await client.GetPetAdsAsync(query);
+
+        // Assert
+        await AssertBadRequestForOnlyAsync(response, "species");
+    }
+
+    [Fact]
+    public async Task ListPetAds_SpeciesUnknownName_Returns400WithOnlyThatField()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = factory.CreateApiClient();
+
+        // Act
+        var response = await client.GetPetAdsAsync("species=Hamster");
+
+        // Assert
+        await AssertBadRequestForOnlyAsync(response, "species");
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("1")]
+    [InlineData("4")]
+    [InlineData("99")]
+    public async Task ListPetAds_SpeciesNumeric_Returns400WithOnlyThatField(string species)
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = factory.CreateApiClient();
+
+        // Act
+        var response = await client.GetPetAdsAsync($"species={species}");
+
+        // Assert
+        await AssertBadRequestForOnlyAsync(response, "species");
+    }
+
+    [Theory]
+    [InlineData(PetSpecies.Dog)]
+    [InlineData(PetSpecies.Cat)]
+    [InlineData(PetSpecies.Bird)]
+    [InlineData(PetSpecies.Rabbit)]
+    [InlineData(PetSpecies.Other)]
+    public async Task ListPetAds_EachAllowedSpecies_ReturnsOnlyActiveAdsOfThatSpecies(PetSpecies species)
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var ownerId = await factory.SeedOwnerAsync("owner@x.com");
+        var matching = Enumerable.Range(0, 3)
+            .Select(day => BuildPetAd(ownerId, Day1.AddDays(day), species: species))
+            .ToArray();
+        var others = Enum.GetValues<PetSpecies>().Where(other => other != species)
+            .Select(other => BuildPetAd(ownerId, Day1, species: other))
+            .ToArray();
+        await factory.SeedAdsAsync(matching);
+        await factory.SeedAdsAsync(others);
+        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: species, status: PetAdStatus.Closed));
+        var client = factory.CreateApiClient();
+
+        // Act
+        var response = await client.GetPetAdsAsync($"species={species}&pageSize=2");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = await ReadJsonAsync(response);
+        Assert.Equal([matching[2].Id, matching[1].Id], ItemIds(json));
+        Assert.Equal(3, json.RootElement.GetProperty("totalCount").GetInt32());
+        Assert.All(json.RootElement.GetProperty("items").EnumerateArray(),
+            item => Assert.Equal(species.ToString(), item.GetProperty("species").GetString()));
+    }
+
+    [Fact]
+    public async Task ListPetAds_NotLoggedInWithValidSpecies_Returns200()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var ownerId = await factory.SeedOwnerAsync("owner@x.com");
+        var rabbit = BuildPetAd(ownerId, Day1, species: PetSpecies.Rabbit);
+        await factory.SeedAdsAsync(rabbit);
+        var client = factory.CreateApiClient();
+
+        // Act
+        var response = await client.GetPetAdsAsync("species=Rabbit");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = await ReadJsonAsync(response);
+        Assert.Equal([rabbit.Id], ItemIds(json));
+    }
+
+    [Fact]
+    public async Task ListPetAds_ClosedAdOfFilteredSpecies_IsNotListed()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var ownerId = await factory.SeedOwnerAsync("owner@x.com");
+        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: PetSpecies.Bird, status: PetAdStatus.Closed));
+        var client = factory.CreateApiClient();
+
+        // Act
+        var response = await client.GetPetAdsAsync("species=Bird");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

@@ -19,7 +19,7 @@ public class GetPetAdTests
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
         var ad = BuildPetAd(ownerId, Day1, title: "Kitten for sale", type: PetAdType.Sale,
-            species: "Cat", price: 99.5m, location: "Bitola");
+            species: PetSpecies.Cat, price: 99.5m, location: "Bitola");
         await factory.SeedAdsAsync(ad);
         var client = await factory.CreateLoggedInClientAsync("viewer@x.com");
 

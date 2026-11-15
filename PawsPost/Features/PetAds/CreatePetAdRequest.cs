@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using PawsPost.Data;
 
@@ -7,7 +8,6 @@ namespace PawsPost.Features.PetAds;
 public class CreatePetAdRequest : IValidatableObject
 {
     public const int TitleMaxLength = 100;
-    public const int SpeciesMaxLength = 50;
     public const int BreedMaxLength = 100;
     public const int DescriptionMaxLength = 2000;
     public const int LocationMaxLength = 100;
@@ -22,9 +22,10 @@ public class CreatePetAdRequest : IValidatableObject
     [JsonConverter(typeof(StrictPetAdTypeConverter))]
     public PetAdType? Type { get; init; }
 
-    // Length rules are checked in Validate on the trimmed text. [Required] already rejects whitespace-only text.
+    // Nullable so a missing value is reported instead of being read as the first enum value.
     [Required]
-    public string? Species { get; init; }
+    [JsonConverter(typeof(StrictPetSpeciesConverter))]
+    public PetSpecies? Species { get; init; }
 
     public string? Breed { get; init; }
 
@@ -46,12 +47,6 @@ public class CreatePetAdRequest : IValidatableObject
         if (title.Length > TitleMaxLength)
         {
             yield return TooLong(nameof(Title), TitleMaxLength);
-        }
-
-        var species = Species?.Trim() ?? string.Empty;
-        if (species.Length > SpeciesMaxLength)
-        {
-            yield return TooLong(nameof(Species), SpeciesMaxLength);
         }
 
         if (Breed?.Trim().Length > BreedMaxLength)
@@ -96,6 +91,33 @@ public class CreatePetAdRequest : IValidatableObject
 
     private static ValidationResult TooLong(string field, int maxLength) =>
         new($"The {field} field must be at most {maxLength} characters.", [field]);
+
+    // Accepts only the exact names of PetSpecies, in any case. No trimming, no combinations, no numbers.
+    private sealed class StrictPetSpeciesConverter : JsonConverter<PetSpecies?>
+    {
+        public override PetSpecies? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType != JsonTokenType.String)
+            {
+                throw new JsonException("Species must be a string.");
+            }
+
+            return PetSpeciesParser.ParseExact(reader.GetString())
+                ?? throw new JsonException("Unknown species.");
+        }
+
+        public override void Write(Utf8JsonWriter writer, PetSpecies? value, JsonSerializerOptions options)
+        {
+            if (value is null)
+            {
+                writer.WriteNullValue();
+            }
+            else
+            {
+                writer.WriteStringValue(value.Value.ToString());
+            }
+        }
+    }
 
     // Accepts only the names "Adoption" and "Sale". Numbers are rejected.
     private sealed class StrictPetAdTypeConverter : JsonStringEnumConverter<PetAdType>

@@ -192,6 +192,73 @@ public class OpenApiDocumentTests(PawsPostFactory factory) : IClassFixture<PawsP
         }
     }
 
+    private static readonly string[] AllowedSpecies = ["Dog", "Cat", "Bird", "Rabbit", "Other"];
+
+    [Fact]
+    public async Task GetOpenApiDocument_CreatePetAdRequestSchema_SpeciesListsExactlyTheAllowedValues()
+    {
+        // Arrange
+        using var document = await GetOpenApiDocumentAsync();
+
+        // Act
+        var species = GetSchema(document, "CreatePetAdRequest").GetProperty("properties").GetProperty("species");
+
+        // Assert
+        Assert.Equal(AllowedSpecies.Order(), GetEnumValues(document, species).Order());
+    }
+
+    [Theory]
+    [InlineData("PetAdResponse")]
+    [InlineData("PetAdListItemResponse")]
+    [InlineData("PetAdDetailsResponse")]
+    public async Task GetOpenApiDocument_ResponseSchema_SpeciesListsExactlyTheAllowedValues(string schemaName)
+    {
+        // Arrange
+        using var document = await GetOpenApiDocumentAsync();
+
+        // Act
+        var species = GetSchema(document, schemaName).GetProperty("properties").GetProperty("species");
+
+        // Assert
+        Assert.Equal(AllowedSpecies.Order(), GetEnumValues(document, species).Order());
+    }
+
+    [Fact]
+    public async Task GetOpenApiDocument_PetAdsGet_SpeciesQueryParameterListsExactlyTheAllowedValues()
+    {
+        // Arrange
+        using var document = await GetOpenApiDocumentAsync();
+
+        // Act
+        var parameter = GetPetAdsGet(document).GetProperty("parameters").EnumerateArray()
+            .Single(p => p.GetProperty("name").GetString() == "species");
+
+        // Assert
+        Assert.Equal(AllowedSpecies.Order(), GetEnumValues(document, parameter.GetProperty("schema")).Order());
+    }
+
+    // Follows a $ref (and the oneOf/allOf wrappers some generators add) to the enum values.
+    private static List<string?> GetEnumValues(JsonDocument document, JsonElement schema)
+    {
+        if (schema.TryGetProperty("$ref", out var reference))
+        {
+            return GetEnumValues(document, GetSchema(document, reference.GetString()!.Split('/').Last()));
+        }
+
+        foreach (var wrapper in new[] { "oneOf", "allOf", "anyOf" })
+        {
+            if (schema.TryGetProperty(wrapper, out var parts))
+            {
+                return parts.EnumerateArray()
+                    .Where(part => part.TryGetProperty("$ref", out _) || part.TryGetProperty("enum", out _))
+                    .SelectMany(part => GetEnumValues(document, part))
+                    .ToList();
+            }
+        }
+
+        return schema.GetProperty("enum").EnumerateArray().Select(value => value.GetString()).ToList();
+    }
+
     private static JsonElement GetPetAdsIdGet(JsonDocument document) =>
         document.RootElement.GetProperty("paths").GetProperty("/api/pet-ads/{id}").GetProperty("get");
 

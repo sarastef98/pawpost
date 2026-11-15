@@ -113,7 +113,7 @@ namespace PawsPost.Data.Migrations
 
                     b.Property<string>("Species")
                         .IsRequired()
-                        .HasMaxLength(50)
+                        .HasMaxLength(20)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Status")

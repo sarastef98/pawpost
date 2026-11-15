@@ -15,7 +15,7 @@ public class PetAdService(AppDbContext dbContext, TimeProvider timeProvider) : I
             Id = Guid.NewGuid(),
             Title = request.Title!.Trim(),
             Type = type,
-            Species = request.Species!.Trim(),
+            Species = request.Species!.Value,
             Breed = NullIfEmpty(request.Breed),
             AgeInMonths = request.AgeInMonths!.Value,
             Description = request.Description!.Trim(),
@@ -41,14 +41,10 @@ public class PetAdService(AppDbContext dbContext, TimeProvider timeProvider) : I
             .AsNoTracking()
             .Where(petAd => petAd.Status == PetAdStatus.Active);
 
-        var species = request.Species?.Trim();
-        if (!string.IsNullOrEmpty(species))
+        var species = request.GetParsedSpecies();
+        if (species is not null)
         {
-            // Known limit (plan decision 3): SQLite NOCASE only ignores case for ASCII letters,
-            // so "dog" matches "Dog" but Cyrillic or other non-ASCII letters must match case exactly.
-            // The Species index uses the default binary collation, so this NOCASE comparison does not use it.
-            // The Status + CreatedAt index narrows the rows to Active ads first.
-            query = query.Where(petAd => EF.Functions.Collate(petAd.Species, "NOCASE") == species);
+            query = query.Where(petAd => petAd.Species == species);
         }
 
         var type = request.GetParsedType();
