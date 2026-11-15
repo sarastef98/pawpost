@@ -8,6 +8,7 @@ import { deferred, failResult, okResult } from '../../test/apiResponses'
 import { AuthContext } from '../auth/useAuth'
 import type { AuthStatus } from '../auth/useAuth'
 import CreatePetAdPage from './CreatePetAdPage'
+import PetAdDetailsPage from './PetAdDetailsPage'
 import { CREATE_FAILED_MESSAGE } from './petAdFormErrors'
 
 vi.mock('../../api/client', () => ({
@@ -447,5 +448,219 @@ describe('CreatePetAdPage', () => {
     expect(post).toHaveBeenCalledTimes(1)
     pending.resolve(okResult({ id: 'ad-1' }, 201))
     expect(await screen.findByText('Details probe')).toBeInTheDocument()
+  })
+})
+
+describe('CreatePetAdPage age unit keyboard use', () => {
+  it('moves the age unit from Months to Years with the right arrow key', async () => {
+    renderPage()
+    const user = userEvent.setup()
+    screen.getByLabelText('Months').focus()
+
+    await user.keyboard('{ArrowRight}')
+
+    expect(screen.getByLabelText('Years')).toBeChecked()
+    expect(screen.getByLabelText('Years')).toHaveFocus()
+    expect(screen.getByLabelText('Months')).not.toBeChecked()
+  })
+
+  it('moves the age unit back to Months with the left arrow key', async () => {
+    renderPage()
+    const user = userEvent.setup()
+    await user.click(screen.getByLabelText('Years'))
+
+    await user.keyboard('{ArrowLeft}')
+
+    expect(screen.getByLabelText('Months')).toBeChecked()
+  })
+
+  it('reaches the age unit group with the Tab key from the age field', async () => {
+    renderPage()
+    const user = userEvent.setup()
+    await user.click(screen.getByLabelText('Age'))
+
+    await user.tab()
+
+    expect(screen.getByLabelText('Months')).toHaveFocus()
+  })
+
+  it('sends the unit chosen with the keyboard', async () => {
+    post.mockResolvedValue(okResult({ id: 'ad-1' }, 201))
+    renderPage()
+    const user = await fillValid({ age: '2' })
+    screen.getByLabelText('Months').focus()
+    await user.keyboard('{ArrowRight}')
+
+    await user.click(screen.getByRole('button', { name: 'Post ad' }))
+
+    await waitFor(() => expect(post).toHaveBeenCalled())
+    expect(sentBody().ageInMonths).toBe(24)
+  })
+})
+
+describe('CreatePetAdPage server errors per field', () => {
+  it('shows a type only server error next to the type field and keeps other values', async () => {
+    post.mockResolvedValue(
+      failResult(400, { errors: { type: ['Unknown type.'] } }),
+    )
+    renderPage()
+    await fillValid()
+
+    await submit()
+
+    expect(await screen.findByText('Unknown type.')).toBeVisible()
+    expect(screen.getByLabelText('Type')).toHaveAccessibleDescription(
+      'Unknown type.',
+    )
+    await waitFor(() => expect(screen.getByLabelText('Type')).toHaveFocus())
+    expect(screen.getByLabelText('Title')).toHaveValue('Friendly Rex')
+    expect(screen.getByLabelText('Title')).not.toBeInvalid()
+    expect(screen.getByLabelText('Species')).not.toBeInvalid()
+  })
+
+  it('shows server errors for price, breed and location next to their fields', async () => {
+    post.mockResolvedValue(
+      failResult(400, {
+        errors: {
+          Price: ['Server price.'],
+          '$.breed': ['Server breed.'],
+          location: ['Server location.'],
+        },
+      }),
+    )
+    renderPage()
+    const user = await fillValid({ type: 'Sale' })
+    await user.type(screen.getByLabelText('Price'), '10')
+    await user.type(screen.getByLabelText('Breed'), 'Dutch')
+    await user.type(screen.getByLabelText('Location'), 'Skopje')
+
+    await user.click(screen.getByRole('button', { name: 'Post ad' }))
+
+    expect(await screen.findByText('Server price.')).toBeVisible()
+    expect(screen.getByLabelText('Price')).toHaveAccessibleDescription(
+      'Server price.',
+    )
+    expect(screen.getByLabelText('Breed')).toHaveAccessibleDescription(
+      'Server breed.',
+    )
+    expect(screen.getByLabelText('Location')).toHaveAccessibleDescription(
+      'Server location.',
+    )
+    expect(screen.getByLabelText('Breed')).toHaveValue('Dutch')
+  })
+
+  it('focuses the first field with a server error in form order', async () => {
+    post.mockResolvedValue(
+      failResult(400, {
+        errors: { location: ['Server location.'], breed: ['Server breed.'] },
+      }),
+    )
+    renderPage()
+    await fillValid()
+
+    await submit()
+
+    await screen.findByText('Server breed.')
+    await waitFor(() => expect(screen.getByLabelText('Breed')).toHaveFocus())
+  })
+})
+
+describe('CreatePetAdPage whitespace only optional fields', () => {
+  it('sends no breed or location when they contain only spaces', async () => {
+    post.mockResolvedValue(okResult({ id: 'ad-1' }, 201))
+    renderPage()
+    const user = await fillValid()
+    await user.type(screen.getByLabelText('Breed'), '   ')
+    await user.type(screen.getByLabelText('Location'), '   ')
+
+    await user.click(screen.getByRole('button', { name: 'Post ad' }))
+
+    await waitFor(() => expect(post).toHaveBeenCalled())
+    expect(sentBody()).not.toHaveProperty('breed')
+    expect(sentBody()).not.toHaveProperty('location')
+  })
+
+  it('shows no error next to whitespace only breed and location', async () => {
+    post.mockResolvedValue(okResult({ id: 'ad-1' }, 201))
+    renderPage()
+    const user = await fillValid()
+    await user.type(screen.getByLabelText('Breed'), '   ')
+    await user.type(screen.getByLabelText('Location'), '   ')
+
+    await user.click(screen.getByRole('button', { name: 'Post ad' }))
+
+    await screen.findByText('Details probe')
+    expect(post).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('CreatePetAdPage success notice on the details page', () => {
+  const get = client.GET as unknown as Mock
+
+  function renderFlow(
+    entries: Parameters<typeof MemoryRouter>[0]['initialEntries'],
+  ) {
+    const value = {
+      status: 'loggedIn' as const,
+      user: { id: 'u1', email: 'sara@example.com' },
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+    }
+    render(
+      <AuthContext.Provider value={value}>
+        <MemoryRouter initialEntries={entries}>
+          <Routes>
+            <Route path="/pet-ads/new" element={<CreatePetAdPage />} />
+            <Route path="/pet-ads/:id" element={<PetAdDetailsPage />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>,
+    )
+  }
+
+  const ad = {
+    id: 'ad-9',
+    title: 'Friendly Rex',
+    type: 'Adoption',
+    species: 'Rabbit',
+    ageInMonths: 8,
+    description: 'A calm pet.',
+    status: 'Active',
+    createdAt: '2026-11-01T10:00:00Z',
+  }
+
+  beforeEach(() => {
+    get.mockReset()
+    get.mockResolvedValue(okResult(ad))
+  })
+
+  it('shows the success notice on the new ad after posting', async () => {
+    post.mockResolvedValue(okResult({ id: 'ad-9' }, 201))
+    renderFlow(['/pet-ads/new'])
+    await fillValid()
+
+    await submit()
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Friendly Rex' }),
+    ).toBeInTheDocument()
+    // The notice is filled into the status region on the next tick.
+    expect(await screen.findByText('Your ad is live.')).toBeVisible()
+    expect(screen.getByRole('status')).toHaveTextContent('Your ad is live.')
+  })
+
+  it('shows no notice when the details page is opened directly', async () => {
+    renderFlow(['/pet-ads/ad-9'])
+
+    await screen.findByRole('heading', { level: 1, name: 'Friendly Rex' })
+    expect(screen.queryByText('Your ad is live.')).toBeNull()
+  })
+
+  it('shows no notice when the router state is lost on reload', async () => {
+    renderFlow([{ pathname: '/pet-ads/ad-9', state: null }])
+
+    await screen.findByRole('heading', { level: 1, name: 'Friendly Rex' })
+    expect(screen.queryByText('Your ad is live.')).toBeNull()
   })
 })
