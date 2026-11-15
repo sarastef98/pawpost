@@ -8,16 +8,16 @@ public static class PetSpeciesParser
     public static PetSpecies? Parse(string? value) => ParseExact(value?.Trim());
 
     // Same as Parse, but the value is not trimmed, so padded names are rejected.
-    public static PetSpecies? ParseExact(string? trimmed)
+    public static PetSpecies? ParseExact(string? value)
     {
-        if (string.IsNullOrEmpty(trimmed))
+        if (string.IsNullOrEmpty(value))
         {
             return null;
         }
 
         foreach (var species in Enum.GetValues<PetSpecies>())
         {
-            if (string.Equals(trimmed, species.ToString(), StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(value, species.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 return species;
             }
