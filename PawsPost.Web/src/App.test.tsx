@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -96,5 +96,76 @@ describe('App', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: 'Welcome to PawsPost' }),
     ).toBeInTheDocument()
+  })
+})
+
+describe('App not-found route', () => {
+  it('shows the not-found page inside the layout for an unknown URL', () => {
+    renderAt('/nope')
+
+    expect(screen.getByRole('banner')).toBeInTheDocument()
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('main')).getByRole('heading', {
+        level: 1,
+        name: 'Page not found',
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it('shows the not-found page for a deeper unknown URL', () => {
+    renderAt('/pet-ads/abc/extra')
+
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Page not found' }),
+    ).toBeInTheDocument()
+  })
+
+  it('goes to the home page when Back to home is clicked', async () => {
+    const user = userEvent.setup()
+    renderAt('/nope')
+
+    await user.click(screen.getByRole('link', { name: 'Back to home' }))
+
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Welcome to PawsPost' }),
+    ).toBeInTheDocument()
+  })
+
+  it('does not show the not-found page at the home route', () => {
+    renderAt('/')
+
+    expect(
+      screen.queryByRole('heading', { name: 'Page not found' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('does not show the not-found page at the style guide route', () => {
+    renderAt('/styleguide')
+
+    expect(
+      screen.queryByRole('heading', { name: 'Page not found' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('does not show the not-found page at the login route', async () => {
+    renderAt('/login')
+
+    await screen.findByRole('heading', { level: 1, name: 'Log in' })
+    expect(
+      screen.queryByRole('heading', { name: 'Page not found' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('does not show the not-found page at the register route', async () => {
+    renderAt('/register')
+
+    await screen.findByRole('heading', {
+      level: 1,
+      name: 'Create your account',
+    })
+    expect(
+      screen.queryByRole('heading', { name: 'Page not found' }),
+    ).not.toBeInTheDocument()
   })
 })
