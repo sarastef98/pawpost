@@ -759,6 +759,30 @@ public class CreatePetAdTests
         Assert.Empty(await factory.GetStoredAdsAsync());
     }
 
+    [Theory]
+    [InlineData("true")]
+    [InlineData("false")]
+    [InlineData("{}")]
+    [InlineData("{\"name\":\"Dog\"}")]
+    [InlineData("[\"Dog\"]")]
+    [InlineData("1.5")]
+    public async Task CreatePetAd_SpeciesNotAJsonString_Returns400WithOnlyThatField(string speciesJson)
+    {
+        // Arrange (raw JSON, because the helper can only send typed values)
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("a@x.com");
+        var json = "{\"title\":\"Friendly beagle looking for a home\",\"type\":\"Adoption\",\"species\":" + speciesJson
+            + ",\"breed\":\"Beagle\",\"ageInMonths\":24,\"description\":\"Friendly and healthy.\",\"location\":\"Skopje\"}";
+        using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+        // Act
+        var response = await client.PostAsync(PetAdTestHelpers.PetAdsUrl, content);
+
+        // Assert
+        await AssertBadRequestForOnlyAsync(response, "species");
+        Assert.Empty(await factory.GetStoredAdsAsync());
+    }
+
     [Fact]
     public async Task CreatePetAd_MalformedJson_ReturnsBadRequest()
     {

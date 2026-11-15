@@ -104,4 +104,80 @@ public class PetSpeciesParserTests
         // Assert
         Assert.Null(result);
     }
+
+    [Theory]
+    [InlineData("Dog", PetSpecies.Dog)]
+    [InlineData("Cat", PetSpecies.Cat)]
+    [InlineData("Bird", PetSpecies.Bird)]
+    [InlineData("Rabbit", PetSpecies.Rabbit)]
+    [InlineData("Other", PetSpecies.Other)]
+    [InlineData("dog", PetSpecies.Dog)]
+    [InlineData("CAT", PetSpecies.Cat)]
+    [InlineData("bIrD", PetSpecies.Bird)]
+    [InlineData("OTHER", PetSpecies.Other)]
+    public void ParseExact_NameInAnyCase_ReturnsThatSpecies(string value, PetSpecies expected)
+    {
+        // Act
+        var result = PetSpeciesParser.ParseExact(value);
+
+        // Assert
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData(" Dog")]
+    [InlineData("Dog ")]
+    [InlineData("  dog  ")]
+    [InlineData("\tDog\n")]
+    public void ParseExact_PaddedName_ReturnsNull(string value)
+    {
+        // Act
+        var result = PetSpeciesParser.ParseExact(value);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Theory]
+    [InlineData("Dog, Cat")]
+    [InlineData("Dog|Cat")]
+    [InlineData("Dog Cat")]
+    [InlineData("DogCat")]
+    public void ParseExact_CombinedNames_ReturnsNull(string value)
+    {
+        // Act
+        var result = PetSpeciesParser.ParseExact(value);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("1")]
+    [InlineData("4")]
+    [InlineData("99")]
+    [InlineData("-1")]
+    public void ParseExact_Number_ReturnsNull(string value)
+    {
+        // Act
+        var result = PetSpeciesParser.ParseExact(value);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("Hamster")]
+    public void ParseExact_NullEmptyWhitespaceOrUnknown_ReturnsNull(string? value)
+    {
+        // Act
+        var result = PetSpeciesParser.ParseExact(value);
+
+        // Assert
+        Assert.Null(result);
+    }
 }
