@@ -1,4 +1,4 @@
-import type { FieldErrors, FieldName } from './createPetAdForm'
+import type { FieldErrors, FieldName } from './petAdFormRules'
 
 export const CREATE_FAILED_MESSAGE =
   'We could not post your ad. Please check your connection and try again.'

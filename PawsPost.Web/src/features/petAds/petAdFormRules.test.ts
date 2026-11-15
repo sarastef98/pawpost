@@ -5,8 +5,8 @@ import {
   buildRequestBody,
   toAgeInMonths,
   validateForm,
-} from './createPetAdForm'
-import type { FormValues } from './createPetAdForm'
+} from './petAdFormRules'
+import type { FormValues } from './petAdFormRules'
 
 function valid(overrides: Partial<FormValues> = {}): FormValues {
   return {
