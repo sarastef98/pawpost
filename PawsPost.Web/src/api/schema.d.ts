@@ -11,7 +11,7 @@ export interface paths {
                 query?: {
                     page?: number | string;
                     pageSize?: number | string;
-                    species?: string;
+                    species?: "Dog" | "Cat" | "Bird" | "Rabbit" | "Other";
                     type?: string;
                 };
                 header?: never;
@@ -383,7 +383,7 @@ export interface components {
         CreatePetAdRequest: {
             title: null | string;
             type: null | components["schemas"]["PetAdType"];
-            species: null | string;
+            species: null | components["schemas"]["PetSpecies"];
             breed?: null | string;
             /** Format: int32 */
             ageInMonths: null | number | string;
@@ -404,7 +404,7 @@ export interface components {
             id: string;
             title: string;
             type: components["schemas"]["PetAdType"];
-            species: string;
+            species: components["schemas"]["PetSpecies"];
             breed: null | string;
             /** Format: int32 */
             ageInMonths: number | string;
@@ -421,7 +421,7 @@ export interface components {
             id: string;
             title: string;
             type: components["schemas"]["PetAdType"];
-            species: string;
+            species: components["schemas"]["PetSpecies"];
             /** Format: double */
             price: null | number | string;
             location: null | string;
@@ -442,7 +442,7 @@ export interface components {
             id: string;
             title: string;
             type: components["schemas"]["PetAdType"];
-            species: string;
+            species: components["schemas"]["PetSpecies"];
             breed: null | string;
             /** Format: int32 */
             ageInMonths: number | string;
@@ -460,6 +460,8 @@ export interface components {
         PetAdStatus: "Draft" | "Active" | "Reserved" | "Closed";
         /** @enum {unknown} */
         PetAdType: "Adoption" | "Sale";
+        /** @enum {unknown} */
+        PetSpecies: "Dog" | "Cat" | "Bird" | "Rabbit" | "Other";
         ProblemDetails: {
             type?: null | string;
             title?: null | string;
