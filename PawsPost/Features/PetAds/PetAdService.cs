@@ -44,10 +44,6 @@ public class PetAdService(AppDbContext dbContext, TimeProvider timeProvider) : I
         var species = request.GetParsedSpecies();
         if (species is not null)
         {
-            // Known limit (plan decision 3): SQLite NOCASE only ignores case for ASCII letters,
-            // so "dog" matches "Dog" but Cyrillic or other non-ASCII letters must match case exactly.
-            // The Species index uses the default binary collation, so this NOCASE comparison does not use it.
-            // The Status + CreatedAt index narrows the rows to Active ads first.
             query = query.Where(petAd => petAd.Species == species);
         }
 

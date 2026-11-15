@@ -15,7 +15,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi(options => options.AddOperationTransformer<NonNullableRequestBodyTransformer>());
+builder.Services.AddOpenApi(options =>
+{
+    options.AddOperationTransformer<NonNullableRequestBodyTransformer>();
+    options.AddOperationTransformer<SpeciesQueryParameterTransformer>();
+});
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' was not found.");
