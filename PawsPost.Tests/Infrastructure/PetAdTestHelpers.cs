@@ -88,7 +88,7 @@ public static class PetAdTestHelpers
         DateTime createdAt,
         string title = "Friendly beagle",
         PetAdType type = PetAdType.Adoption,
-        string species = "Dog",
+        PetSpecies species = PetSpecies.Dog,
         decimal? price = null,
         string? location = "Skopje",
         PetAdStatus status = PetAdStatus.Active,

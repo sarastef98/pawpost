@@ -8,7 +8,7 @@ public class PetAd
 
     public PetAdType Type { get; set; }
 
-    public string Species { get; set; } = string.Empty;
+    public PetSpecies Species { get; set; }
 
     public string? Breed { get; set; }
 

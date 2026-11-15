@@ -17,9 +17,9 @@ public class ListPetAdsTests
         // Arrange
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
-        var first = BuildPetAd(ownerId, Day1, title: "Old dog", species: "Dog");
+        var first = BuildPetAd(ownerId, Day1, title: "Old dog", species: PetSpecies.Dog);
         var second = BuildPetAd(ownerId, Day1.AddDays(1), title: "Kitten for sale", type: PetAdType.Sale,
-            species: "Cat", price: 99.5m, location: "Bitola");
+            species: PetSpecies.Cat, price: 99.5m, location: "Bitola");
         await factory.SeedAdsAsync(first, second);
         var client = factory.CreateApiClient();
 
@@ -245,8 +245,8 @@ public class ListPetAdsTests
         // Arrange
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
-        var dog = BuildPetAd(ownerId, Day1, species: "Dog");
-        await factory.SeedAdsAsync(dog, BuildPetAd(ownerId, Day1, species: "Cat"));
+        var dog = BuildPetAd(ownerId, Day1, species: PetSpecies.Dog);
+        await factory.SeedAdsAsync(dog, BuildPetAd(ownerId, Day1, species: PetSpecies.Cat));
         var client = factory.CreateApiClient();
 
         // Act
@@ -264,8 +264,8 @@ public class ListPetAdsTests
         // Arrange
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
-        var dog = BuildPetAd(ownerId, Day1, species: "Dog");
-        var cyrillicDog = BuildPetAd(ownerId, Day1.AddDays(1), species: "Куче");
+        var dog = BuildPetAd(ownerId, Day1, species: PetSpecies.Dog);
+        var cyrillicDog = BuildPetAd(ownerId, Day1.AddDays(1), species: PetSpecies.Other);
         await factory.SeedAdsAsync(dog, cyrillicDog);
         var client = factory.CreateApiClient();
 
@@ -291,7 +291,7 @@ public class ListPetAdsTests
         // Arrange
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
-        var dog = BuildPetAd(ownerId, Day1, species: "Dog");
+        var dog = BuildPetAd(ownerId, Day1, species: PetSpecies.Dog);
         await factory.SeedAdsAsync(dog);
         var client = factory.CreateApiClient();
 
@@ -309,7 +309,7 @@ public class ListPetAdsTests
         // Arrange
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
-        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: "Dog"));
+        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: PetSpecies.Dog));
         var client = factory.CreateApiClient();
 
         // Act
@@ -330,7 +330,7 @@ public class ListPetAdsTests
         // Arrange
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
-        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: "Dog"), BuildPetAd(ownerId, Day1.AddDays(1), species: "Cat"));
+        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: PetSpecies.Dog), BuildPetAd(ownerId, Day1.AddDays(1), species: PetSpecies.Cat));
         var client = factory.CreateApiClient();
 
         // Act
@@ -352,7 +352,7 @@ public class ListPetAdsTests
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
         var species = new string('a', 50);
-        var ad = BuildPetAd(ownerId, Day1, species: species);
+        var ad = BuildPetAd(ownerId, Day1, species: PetSpecies.Other);
         await factory.SeedAdsAsync(ad);
         var client = factory.CreateApiClient();
         var query = padWithSpaces ? $"species=%20%20{species}%20%20" : $"species={species}";
@@ -429,11 +429,11 @@ public class ListPetAdsTests
         // Arrange
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
-        var match = BuildPetAd(ownerId, Day1, species: "Dog", type: PetAdType.Sale, price: 10m);
+        var match = BuildPetAd(ownerId, Day1, species: PetSpecies.Dog, type: PetAdType.Sale, price: 10m);
         await factory.SeedAdsAsync(
             match,
-            BuildPetAd(ownerId, Day1, species: "Dog"),
-            BuildPetAd(ownerId, Day1, species: "Cat", type: PetAdType.Sale, price: 10m));
+            BuildPetAd(ownerId, Day1, species: PetSpecies.Dog),
+            BuildPetAd(ownerId, Day1, species: PetSpecies.Cat, type: PetAdType.Sale, price: 10m));
         var client = factory.CreateApiClient();
 
         // Act
@@ -450,7 +450,7 @@ public class ListPetAdsTests
         // Arrange
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
-        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: "Dog"));
+        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: PetSpecies.Dog));
         var client = factory.CreateApiClient();
 
         // Act
@@ -469,9 +469,9 @@ public class ListPetAdsTests
         // Arrange
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
-        var dogs = Enumerable.Range(0, 3).Select(day => BuildPetAd(ownerId, Day1.AddDays(day), species: "Dog")).ToArray();
+        var dogs = Enumerable.Range(0, 3).Select(day => BuildPetAd(ownerId, Day1.AddDays(day), species: PetSpecies.Dog)).ToArray();
         await factory.SeedAdsAsync(dogs);
-        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: "Cat"), BuildPetAd(ownerId, Day1, species: "Cat"));
+        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: PetSpecies.Cat), BuildPetAd(ownerId, Day1, species: PetSpecies.Cat));
         var client = factory.CreateApiClient();
 
         // Act
@@ -781,7 +781,7 @@ public class ListPetAdsTests
         // Arrange
         using var factory = new PawsPostFactory();
         var ownerId = await factory.SeedOwnerAsync("owner@x.com");
-        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: "Dog"));
+        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, species: PetSpecies.Dog));
         var client = factory.CreateApiClient();
 
         // Act

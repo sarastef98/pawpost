@@ -15,7 +15,7 @@ public class PetAdService(AppDbContext dbContext, TimeProvider timeProvider) : I
             Id = Guid.NewGuid(),
             Title = request.Title!.Trim(),
             Type = type,
-            Species = request.Species!.Trim(),
+            Species = PetSpeciesParser.Parse(request.Species)!.Value,
             Breed = NullIfEmpty(request.Breed),
             AgeInMonths = request.AgeInMonths!.Value,
             Description = request.Description!.Trim(),
@@ -31,7 +31,7 @@ public class PetAdService(AppDbContext dbContext, TimeProvider timeProvider) : I
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return new PetAdResponse(
-            ad.Id, ad.Title, ad.Type, ad.Species, ad.Breed, ad.AgeInMonths, ad.Description,
+            ad.Id, ad.Title, ad.Type, ad.Species.ToString(), ad.Breed, ad.AgeInMonths, ad.Description,
             ad.Price, ad.Location, ad.Status, ad.OwnerId, ad.CreatedAt);
     }
 
@@ -41,14 +41,14 @@ public class PetAdService(AppDbContext dbContext, TimeProvider timeProvider) : I
             .AsNoTracking()
             .Where(petAd => petAd.Status == PetAdStatus.Active);
 
-        var species = request.Species?.Trim();
-        if (!string.IsNullOrEmpty(species))
+        var species = PetSpeciesParser.Parse(request.Species);
+        if (species is not null)
         {
             // Known limit (plan decision 3): SQLite NOCASE only ignores case for ASCII letters,
             // so "dog" matches "Dog" but Cyrillic or other non-ASCII letters must match case exactly.
             // The Species index uses the default binary collation, so this NOCASE comparison does not use it.
             // The Status + CreatedAt index narrows the rows to Active ads first.
-            query = query.Where(petAd => EF.Functions.Collate(petAd.Species, "NOCASE") == species);
+            query = query.Where(petAd => petAd.Species == species);
         }
 
         var type = request.GetParsedType();
@@ -86,7 +86,7 @@ public class PetAdService(AppDbContext dbContext, TimeProvider timeProvider) : I
         // SQLite returns DateTime with Kind Unspecified. Mark it as UTC so the JSON ends with "Z".
         var items = rows
             .Select(row => new PetAdListItemResponse(
-                row.Id, row.Title, row.Type, row.Species, row.Price, row.Location,
+                row.Id, row.Title, row.Type, row.Species.ToString(), row.Price, row.Location,
                 DateTime.SpecifyKind(row.CreatedAt, DateTimeKind.Utc)))
             .ToList();
 
@@ -122,7 +122,7 @@ public class PetAdService(AppDbContext dbContext, TimeProvider timeProvider) : I
 
         // SQLite returns DateTime with Kind Unspecified. Mark it as UTC so the JSON ends with "Z".
         return new PetAdDetailsResponse(
-            row.Id, row.Title, row.Type, row.Species, row.Breed, row.AgeInMonths, row.Description,
+            row.Id, row.Title, row.Type, row.Species.ToString(), row.Breed, row.AgeInMonths, row.Description,
             row.Price, row.Location, row.Status, DateTime.SpecifyKind(row.CreatedAt, DateTimeKind.Utc));
     }
 

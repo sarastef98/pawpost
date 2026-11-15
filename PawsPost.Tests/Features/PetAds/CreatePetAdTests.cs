@@ -292,7 +292,7 @@ public class CreatePetAdTests
         Assert.Equal("Nice", ad?.Description);
         Assert.Equal("Skopje", ad?.Location);
         var stored = Assert.Single(await factory.GetStoredAdsAsync());
-        Assert.Equal("Dog", stored.Species);
+        Assert.Equal(PetSpecies.Dog, stored.Species);
         Assert.Equal("Beagle", stored.Breed);
         Assert.Equal("Nice", stored.Description);
         Assert.Equal("Skopje", stored.Location);
@@ -353,7 +353,7 @@ public class CreatePetAdTests
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var stored = Assert.Single(await factory.GetStoredAdsAsync());
-        Assert.Equal(maxLength, (field == "species" ? stored.Species : stored.Description).Length);
+        Assert.Equal(maxLength, stored.Description.Length);
     }
 
     [Fact]
