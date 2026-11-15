@@ -22,6 +22,9 @@ public class ListPetAdsRequest : IValidatableObject
     [FromQuery(Name = "type")]
     public string? Type { get; init; }
 
+    // The parsed species filter, or null when no filter is given or the value is not valid.
+    public PetSpecies? GetParsedSpecies() => PetSpeciesParser.Parse(Species);
+
     // The parsed type filter, or null when no filter is given or the value is not valid.
     // A method, not a property, so it is not a query parameter and not in the OpenAPI document.
     public PetAdType? GetParsedType() => ParseType(Type);
@@ -40,11 +43,11 @@ public class ListPetAdsRequest : IValidatableObject
                 $"The PageSize field must be between 1 and {MaxPageSize}.", [nameof(PageSize)]);
         }
 
-        if (Species?.Trim().Length > CreatePetAdRequest.SpeciesMaxLength)
+        // An empty or whitespace-only value means no filter, as before.
+        if (!string.IsNullOrWhiteSpace(Species) && GetParsedSpecies() is null)
         {
             yield return new ValidationResult(
-                $"The Species field must be at most {CreatePetAdRequest.SpeciesMaxLength} characters.",
-                [nameof(Species)]);
+                "The Species field must be Dog, Cat, Bird, Rabbit or Other.", [nameof(Species)]);
         }
 
         if (Type is not null && GetParsedType() is null)

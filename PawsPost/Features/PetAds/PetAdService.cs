@@ -15,7 +15,7 @@ public class PetAdService(AppDbContext dbContext, TimeProvider timeProvider) : I
             Id = Guid.NewGuid(),
             Title = request.Title!.Trim(),
             Type = type,
-            Species = PetSpeciesParser.Parse(request.Species)!.Value,
+            Species = request.Species!.Value,
             Breed = NullIfEmpty(request.Breed),
             AgeInMonths = request.AgeInMonths!.Value,
             Description = request.Description!.Trim(),
@@ -41,7 +41,7 @@ public class PetAdService(AppDbContext dbContext, TimeProvider timeProvider) : I
             .AsNoTracking()
             .Where(petAd => petAd.Status == PetAdStatus.Active);
 
-        var species = PetSpeciesParser.Parse(request.Species);
+        var species = request.GetParsedSpecies();
         if (species is not null)
         {
             // Known limit (plan decision 3): SQLite NOCASE only ignores case for ASCII letters,
