@@ -3,6 +3,7 @@ import Layout from './components/Layout'
 import LoginPage from './features/auth/LoginPage'
 import RegisterPage from './features/auth/RegisterPage'
 import HomePage from './features/home/HomePage'
+import NotFoundPage from './features/notFound/NotFoundPage'
 import StyleGuidePage from './features/styleguide/StyleGuidePage'
 
 function App() {
@@ -13,6 +14,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/styleguide" element={<StyleGuidePage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
   )
