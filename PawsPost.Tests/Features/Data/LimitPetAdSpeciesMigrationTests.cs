@@ -31,7 +31,8 @@ public class LimitPetAdSpeciesMigrationTests : IDisposable
         {
             await db.GetService<IMigrator>().MigrateAsync(PreviousMigration);
             await db.Database.ExecuteSqlRawAsync(
-                $"INSERT INTO AspNetUsers (Id, AccessFailedCount, EmailConfirmed, LockoutEnabled, PhoneNumberConfirmed, TwoFactorEnabled) VALUES ('{OwnerId}', 0, 0, 0, 0, 0)");
+                "INSERT INTO AspNetUsers (Id, AccessFailedCount, EmailConfirmed, LockoutEnabled, PhoneNumberConfirmed, TwoFactorEnabled) VALUES ({0}, 0, 0, 0, 0, 0)",
+                OwnerId.ToString());
             foreach (var (id, species) in legacy)
             {
                 await db.Database.ExecuteSqlRawAsync(
