@@ -4,6 +4,7 @@ import LoginPage from './features/auth/LoginPage'
 import RegisterPage from './features/auth/RegisterPage'
 import HomePage from './features/home/HomePage'
 import NotFoundPage from './features/notFound/NotFoundPage'
+import CreatePetAdPage from './features/petAds/CreatePetAdPage'
 import PetAdDetailsPage from './features/petAds/PetAdDetailsPage'
 import StyleGuidePage from './features/styleguide/StyleGuidePage'
 
@@ -14,6 +15,7 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/pet-ads/new" element={<CreatePetAdPage />} />
         <Route path="/pet-ads/:id" element={<PetAdDetailsPage />} />
         <Route path="/styleguide" element={<StyleGuidePage />} />
         <Route path="*" element={<NotFoundPage />} />

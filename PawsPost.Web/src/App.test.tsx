@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { AuthProvider } from './features/auth/AuthContext'
+import { AuthContext } from './features/auth/useAuth'
 
 // The auth provider asks the API who is logged in. Tests answer "nobody" (401)
 // at the API client boundary. The home page asks for the ads list and gets an
@@ -186,5 +187,29 @@ describe('App not-found route', () => {
     expect(
       screen.queryByRole('heading', { name: 'Page not found' }),
     ).not.toBeInTheDocument()
+  })
+})
+
+describe('App create ad route', () => {
+  it('shows the create page, not the details page, at the new ad route', () => {
+    const value = {
+      status: 'loggedIn' as const,
+      user: { id: 'u1', email: 'sara@example.com' },
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+    }
+    render(
+      <MemoryRouter initialEntries={['/pet-ads/new']}>
+        <AuthContext.Provider value={value}>
+          <App />
+        </AuthContext.Provider>
+      </MemoryRouter>,
+    )
+
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Post an ad' }),
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('Title')).toBeInTheDocument()
   })
 })
