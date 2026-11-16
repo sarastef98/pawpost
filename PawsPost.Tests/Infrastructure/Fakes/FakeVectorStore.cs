@@ -11,6 +11,23 @@ public class FakeVectorStore : IVectorStore
     /// <summary>When set, <see cref="UpsertAsync"/> throws it, to simulate a storage failure.</summary>
     public Exception? UpsertExceptionToThrow { get; set; }
 
+    /// <summary>When set, <see cref="RemoveAsync"/> throws it, to simulate a storage failure.</summary>
+    public Exception? RemoveExceptionToThrow { get; set; }
+
+    private readonly List<Guid> _removedIds = [];
+
+    /// <summary>The ids passed to <see cref="RemoveAsync"/>, in call order.</summary>
+    public IReadOnlyList<Guid> RemovedIds
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _removedIds.ToList();
+            }
+        }
+    }
+
     private readonly List<int> _indexedIdsCallSizes = [];
 
     /// <summary>How many ids each <see cref="GetIndexedIdsAsync"/> call received, in call order.</summary>
@@ -50,6 +67,19 @@ public class FakeVectorStore : IVectorStore
 
     public Task RemoveAsync(Guid petAdId, CancellationToken cancellationToken)
     {
+        // Like the real store: a cancelled token stops the removal.
+        cancellationToken.ThrowIfCancellationRequested();
+
+        lock (_lock)
+        {
+            _removedIds.Add(petAdId);
+        }
+
+        if (RemoveExceptionToThrow is not null)
+        {
+            throw RemoveExceptionToThrow;
+        }
+
         lock (_lock)
         {
             _vectors.Remove(petAdId);

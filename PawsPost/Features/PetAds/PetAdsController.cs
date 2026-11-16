@@ -57,6 +57,32 @@ public class PetAdsController(IPetAdService petAdService) : ControllerBase
         return Ok(ad);
     }
 
+    // POST with a verb segment (like AuthController): closing is an action that is not idempotent,
+    // a second close gives 409. The caller comes from the login cookie, never from the request.
+    [HttpPost("{id}/close")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> CloseAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var outcome = await petAdService.CloseAsync(id, User.GetUserId(), cancellationToken);
+
+        return outcome switch
+        {
+            ClosePetAdOutcome.Closed => NoContent(),
+            ClosePetAdOutcome.NotFound => NotFound(),
+            ClosePetAdOutcome.NotOwner => Problem(
+                title: "Not the owner of this ad", statusCode: StatusCodes.Status403Forbidden),
+            _ => Problem(
+                title: "Ad cannot be closed",
+                detail: "Only Active ads can be closed.",
+                statusCode: StatusCodes.Status409Conflict)
+        };
+    }
+
     [HttpPost]
     [ProducesResponseType<PetAdResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
