@@ -347,3 +347,141 @@ describe('RegisterPage focus after a failed submit', () => {
     expect(document.activeElement).toContainElement(alert)
   })
 })
+
+describe('RegisterPage public name', () => {
+  const INVALID =
+    'Please use 3 to 30 characters: letters, digits, single spaces, hyphens or underscores.'
+  const NAME_TAKEN = 'This name is already taken. Please choose another.'
+
+  it('shows the Public name field last with the rules hint', async () => {
+    renderRegister()
+
+    const name = await screen.findByLabelText('Public name')
+    expect(name).toHaveAccessibleDescription(
+      '3 to 30 characters. Letters, digits, spaces, hyphens (-) and underscores (_). Other people will see this name.',
+    )
+    const form = name.closest('form') as HTMLFormElement
+    const inputs = Array.from(form.querySelectorAll('input'))
+    expect(inputs.map((input) => input.id)).toEqual([
+      screen.getByLabelText('Email').id,
+      screen.getByLabelText('Password').id,
+      name.id,
+    ])
+  })
+
+  it('sends the trimmed public name', async () => {
+    const user = userEvent.setup()
+    post.mockResolvedValue(okResult(testUser, 201))
+    renderRegister()
+
+    await user.type(await screen.findByLabelText('Email'), 'sara@example.com')
+    await user.type(screen.getByLabelText('Password'), 'Secret1!')
+    await user.type(screen.getByLabelText('Public name'), '  Sara Test  ')
+    await user.click(screen.getByRole('button', { name: 'Create account' }))
+
+    expect(post).toHaveBeenCalledWith('/api/auth/register', {
+      body: {
+        email: 'sara@example.com',
+        password: 'Secret1!',
+        displayName: 'Sara Test',
+      },
+    })
+  })
+
+  it.each(['', '   '])(
+    'does not send the form when the public name is "%s"',
+    async (text) => {
+      const user = userEvent.setup()
+      renderRegister()
+
+      await user.type(await screen.findByLabelText('Email'), 'sara@example.com')
+      await user.type(screen.getByLabelText('Password'), 'Secret1!')
+      if (text) await user.type(screen.getByLabelText('Public name'), text)
+      await user.click(screen.getByRole('button', { name: 'Create account' }))
+
+      expect(post).not.toHaveBeenCalled()
+      expect(screen.getByLabelText('Public name')).toHaveAccessibleDescription(
+        'Please choose a public name.',
+      )
+      expect(screen.getByLabelText('Public name')).toHaveFocus()
+    },
+  )
+
+  it('sends a short name to the server without a client length error', async () => {
+    const user = userEvent.setup()
+    post.mockResolvedValue(okResult(testUser, 201))
+    renderRegister()
+
+    await user.type(await screen.findByLabelText('Email'), 'sara@example.com')
+    await user.type(screen.getByLabelText('Password'), 'Secret1!')
+    await user.type(screen.getByLabelText('Public name'), 'Al')
+    await user.click(screen.getByRole('button', { name: 'Create account' }))
+
+    expect(post).toHaveBeenCalledTimes(1)
+    expect(screen.queryByText(INVALID)).not.toBeInTheDocument()
+  })
+
+  it.each(['DisplayName', 'displayName'])(
+    'shows the fixed friendly message next to the name on a 400 with key %s',
+    async (key) => {
+      const user = userEvent.setup()
+      post.mockResolvedValue(
+        failResult(400, {
+          errors: {
+            [key]: ['The DisplayName field must be between 3 and 30.'],
+          },
+        }),
+      )
+      renderRegister()
+
+      await fillAndSubmit(user)
+
+      await waitFor(() =>
+        expect(
+          screen.getByLabelText('Public name'),
+        ).toHaveAccessibleDescription(INVALID),
+      )
+      expect(screen.getByRole('main')).not.toHaveTextContent(
+        /DisplayName field/,
+      )
+      expect(screen.getByLabelText('Public name')).toHaveFocus()
+    },
+  )
+
+  it('shows the name taken message next to the name on a 409 and focuses the field', async () => {
+    const user = userEvent.setup()
+    post.mockResolvedValue(
+      failResult(409, { title: 'Display name already taken', status: 409 }),
+    )
+    renderRegister()
+
+    await fillAndSubmit(user)
+
+    await waitFor(() =>
+      expect(screen.getByLabelText('Public name')).toHaveAccessibleDescription(
+        NAME_TAKEN,
+      ),
+    )
+    expect(screen.getByLabelText('Public name')).toHaveFocus()
+    expect(screen.queryByText(TAKEN)).not.toBeInTheDocument()
+  })
+
+  it('still shows the email taken message with the Log in link on a 409 for the email', async () => {
+    const user = userEvent.setup()
+    post.mockResolvedValue(
+      failResult(409, { title: 'Email already registered', status: 409 }),
+    )
+    renderRegister()
+
+    await fillAndSubmit(user)
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(TAKEN)
+    expect(
+      within(alert.parentElement as HTMLElement).getByRole('link', {
+        name: 'Log in',
+      }),
+    ).toHaveAttribute('href', '/login')
+    expect(screen.queryByText(NAME_TAKEN)).not.toBeInTheDocument()
+  })
+})

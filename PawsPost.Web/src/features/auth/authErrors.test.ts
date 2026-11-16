@@ -130,3 +130,76 @@ describe('networkFormErrors', () => {
     expect(networkFormErrors()).toEqual({ general: GENERIC_MESSAGE })
   })
 })
+
+describe('mapFormErrors public name', () => {
+  const INVALID =
+    'Please use 3 to 30 characters: letters, digits, single spaces, hyphens or underscores.'
+  const NAME_TAKEN = 'This name is already taken. Please choose another.'
+  const EMAIL_TAKEN =
+    'This email is already registered. Try logging in instead.'
+
+  it.each(['DisplayName', 'displayName', 'DISPLAYNAME', 'displayname'])(
+    'puts the %s key on the displayName field with the fixed friendly text',
+    (key) => {
+      const errors = mapFormErrors('register', 400, {
+        errors: { [key]: ['The DisplayName field must be between 3 and 30.'] },
+      })
+
+      expect(errors).toEqual({ displayName: INVALID })
+    },
+  )
+
+  it('does not show the server text or the field name for the name', () => {
+    const errors = mapFormErrors('register', 400, {
+      errors: { DisplayName: ['The DisplayName field is invalid.'] },
+    })
+
+    expect(errors.displayName).not.toMatch(/DisplayName field/)
+    expect(errors.general).toBeUndefined()
+  })
+
+  it('keeps the email and password messages as sent next to the name message', () => {
+    const errors = mapFormErrors('register', 400, {
+      errors: {
+        Email: ['Email is not valid.'],
+        Password: ['Too short.'],
+        DisplayName: ['Bad name.'],
+      },
+    })
+
+    expect(errors).toEqual({
+      email: 'Email is not valid.',
+      password: 'Too short.',
+      displayName: INVALID,
+    })
+  })
+
+  it('gives the name taken message for a 409 with the exact title', () => {
+    const errors = mapFormErrors('register', 409, {
+      title: 'Display name already taken',
+    })
+
+    expect(errors).toEqual({ displayName: NAME_TAKEN })
+  })
+
+  it.each([
+    [{ title: 'Email already registered' }],
+    [{ title: 'display name already taken' }],
+    [{ title: 'Conflict' }],
+    [{}],
+    [undefined],
+  ])('keeps the email taken message for a 409 with body %j', (body) => {
+    const errors = mapFormErrors('register', 409, body)
+
+    expect(errors).toEqual({ general: EMAIL_TAKEN, emailTaken: true })
+  })
+
+  it('does not use the name taken title for a login 409', () => {
+    const errors = mapFormErrors('login', 409, {
+      title: 'Display name already taken',
+    })
+
+    expect(errors.displayName).toBeUndefined()
+    expect(errors.emailTaken).toBeUndefined()
+  })
+})
