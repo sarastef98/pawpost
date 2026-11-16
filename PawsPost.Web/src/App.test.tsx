@@ -13,17 +13,27 @@ vi.mock('./api/client', () => ({
   client: {
     GET: vi.fn((path: string) =>
       Promise.resolve(
-        path === '/api/pet-ads'
+        path === '/api/creators/{id}'
           ? {
-              data: { items: [], totalCount: 0, page: 1, pageSize: 20 },
+              data: {
+                id: 'creator-1',
+                displayName: 'Anna',
+                ads: { items: [], totalCount: 0, page: 1, pageSize: 20 },
+              },
               error: undefined,
               response: { status: 200, ok: true },
             }
-          : {
-              data: undefined,
-              error: {},
-              response: { status: 401, ok: false },
-            },
+          : path === '/api/pet-ads'
+            ? {
+                data: { items: [], totalCount: 0, page: 1, pageSize: 20 },
+                error: undefined,
+                response: { status: 200, ok: true },
+              }
+            : {
+                data: undefined,
+                error: {},
+                response: { status: 401, ok: false },
+              },
       ),
     ),
     POST: vi.fn(),
@@ -241,5 +251,19 @@ describe('App assistant route', () => {
       }),
     ).toBeInTheDocument()
     expect(screen.getByLabelText('Your question')).toBeInTheDocument()
+  })
+
+  it('shows the public creator profile inside the layout without login', async () => {
+    renderAt('/creators/creator-1')
+
+    expect(screen.getByRole('banner')).toBeInTheDocument()
+    expect(screen.getByRole('main')).toBeInTheDocument()
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Anna' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('heading', { name: 'Log in' }),
+    ).not.toBeInTheDocument()
   })
 })
