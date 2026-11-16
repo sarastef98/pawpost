@@ -10,6 +10,7 @@ import {
   failResult,
   okResult,
   sampleListItem,
+  testUser,
 } from '../../test/apiResponses'
 import { AuthContext } from '../auth/useAuth'
 import type { AuthStatus } from '../auth/useAuth'
@@ -29,35 +30,49 @@ function UrlDisplay() {
   return <p>URL: {location.pathname + location.search}</p>
 }
 
-function renderPage(
-  url = '/creators/creator-1',
-  status: AuthStatus = 'loggedOut',
-) {
-  const routes = (
-    <MemoryRouter initialEntries={[url]}>
-      <Routes>
-        <Route path="/login" element={<h1>Login probe</h1>} />
-        <Route path="/" element={<h1>Home probe</h1>} />
-        <Route
-          path="/creators/:id"
-          element={
-            <>
-              <CreatorProfilePage />
-              <UrlDisplay />
-            </>
-          }
-        />
-      </Routes>
-    </MemoryRouter>
-  )
+type TestUser = { id: string; email: string } | null
+
+function pageTree(url: string, status: AuthStatus, user: TestUser) {
   const value = {
     status,
-    user: null,
+    user,
     login: vi.fn(),
     register: vi.fn(),
     logout: vi.fn(),
   }
-  render(<AuthContext.Provider value={value}>{routes}</AuthContext.Provider>)
+  return (
+    <AuthContext.Provider value={value}>
+      <MemoryRouter initialEntries={[url]}>
+        <Routes>
+          <Route path="/login" element={<h1>Login probe</h1>} />
+          <Route path="/" element={<h1>Home probe</h1>} />
+          <Route
+            path="/creators/:id"
+            element={
+              <>
+                <CreatorProfilePage />
+                <UrlDisplay />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    </AuthContext.Provider>
+  )
+}
+
+function renderPage(
+  url = '/creators/creator-1',
+  status: AuthStatus = 'loggedOut',
+  user: TestUser = null,
+) {
+  const result = render(pageTree(url, status, user))
+  return {
+    // Same router (same position in the tree), new auth value.
+    changeAuth(nextStatus: AuthStatus, nextUser: TestUser) {
+      result.rerender(pageTree(url, nextStatus, nextUser))
+    },
+  }
 }
 
 function ads(count: number, from = 1) {
@@ -401,6 +416,238 @@ describe('CreatorProfilePage', () => {
       await waitFor(() =>
         expect(screen.getByRole('heading', { name: 'Ads' })).toHaveFocus(),
       )
+    })
+  })
+
+  describe('own profile', () => {
+    const owner = { id: 'creator-1', email: testUser.email }
+
+    // Answers the public profile and /mine by URL.
+    function answer(mine: unknown, profile?: unknown) {
+      get.mockImplementation((url: string) =>
+        Promise.resolve(
+          url === '/api/pet-ads/mine'
+            ? mine
+            : (profile ?? okResult(creatorProfileBody('Anna', ads(2)))),
+        ),
+      )
+    }
+
+    function mineCalls() {
+      return get.mock.calls.filter(([url]) => url === '/api/pet-ads/mine')
+    }
+
+    function myAds(count: number, from = 1) {
+      return okResult({
+        items: Array.from({ length: count }, (_, i) =>
+          sampleListItem({ id: `mine-${from + i}`, title: `Mine ${from + i}` }),
+        ),
+        totalCount: count,
+        page: 1,
+        pageSize: 20,
+      })
+    }
+
+    it('shows the My ads tab and the user ads when the owner opens their own profile', async () => {
+      answer(myAds(2))
+      renderPage('/creators/creator-1', 'loggedIn', owner)
+
+      expect(
+        await screen.findByRole('heading', { level: 1, name: 'Anna' }),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('tablist', { name: 'My profile' }),
+      ).toBeInTheDocument()
+      expect(screen.getAllByRole('tab')).toHaveLength(1)
+      expect(screen.getByRole('tab', { name: 'My ads' })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      )
+      expect(await screen.findByText('Mine 1')).toBeInTheDocument()
+      expect(screen.getByText('Mine 2')).toBeInTheDocument()
+    })
+
+    it('requests /api/pet-ads/mine on the own profile', async () => {
+      answer(myAds(1))
+      renderPage('/creators/creator-1', 'loggedIn', owner)
+
+      await screen.findByText('Mine 1')
+
+      expect(mineCalls()).toHaveLength(1)
+      expect(mineCalls()[0][1].params.query).toEqual({ page: 1, pageSize: 20 })
+    })
+
+    it('recognises the own profile when the URL id differs only in letter case', async () => {
+      answer(myAds(1))
+      renderPage('/creators/CREATOR-1', 'loggedIn', owner)
+
+      expect(await screen.findByText('Mine 1')).toBeInTheDocument()
+      expect(screen.getByRole('tablist')).toBeInTheDocument()
+    })
+
+    it('does not show the public Ads heading or the public ads on the own profile', async () => {
+      answer(myAds(1))
+      renderPage('/creators/creator-1', 'loggedIn', owner)
+
+      await screen.findByText('Mine 1')
+
+      expect(
+        screen.queryByRole('heading', { level: 2, name: 'Ads' }),
+      ).toBeNull()
+      expect(screen.queryByText('Ad 1')).toBeNull()
+    })
+
+    it('shows no tabs and makes no /mine request for a visitor', async () => {
+      answer(myAds(1))
+      renderPage('/creators/creator-1', 'loggedOut')
+
+      expect(await screen.findByText('Ad 1')).toBeInTheDocument()
+      expect(screen.queryByRole('tablist')).toBeNull()
+      expect(mineCalls()).toHaveLength(0)
+    })
+
+    it('shows no tabs and makes no /mine request for a logged-in user on another profile', async () => {
+      answer(myAds(1))
+      renderPage('/creators/creator-1', 'loggedIn', {
+        id: 'someone-else',
+        email: testUser.email,
+      })
+
+      expect(await screen.findByText('Ad 1')).toBeInTheDocument()
+      expect(
+        screen.getByRole('heading', { level: 2, name: 'Ads' }),
+      ).toBeInTheDocument()
+      expect(screen.queryByRole('tablist')).toBeNull()
+      expect(mineCalls()).toHaveLength(0)
+    })
+
+    it('shows the public view and makes no /mine request while the login state is loading', async () => {
+      answer(myAds(1))
+      renderPage('/creators/creator-1', 'loading')
+
+      expect(await screen.findByText('Ad 1')).toBeInTheDocument()
+      expect(screen.queryByRole('tablist')).toBeNull()
+      expect(mineCalls()).toHaveLength(0)
+    })
+
+    it('shows the tabs once the login state settles as the owner', async () => {
+      answer(myAds(1))
+      const page = renderPage('/creators/creator-1', 'loading')
+      await screen.findByText('Ad 1')
+
+      page.changeAuth('loggedIn', owner)
+
+      expect(await screen.findByText('Mine 1')).toBeInTheDocument()
+      expect(screen.getByRole('tablist')).toBeInTheDocument()
+      expect(screen.queryByText('Ad 1')).toBeNull()
+    })
+
+    it('shows no tabs in the not found state, even for the owner', async () => {
+      answer(myAds(1), failResult(404))
+      renderPage('/creators/creator-1', 'loggedIn', owner)
+
+      expect(await screen.findByText(NOT_FOUND_TEXT)).toBeInTheDocument()
+      expect(screen.queryByRole('tablist')).toBeNull()
+      expect(mineCalls()).toHaveLength(0)
+    })
+
+    it('shows no tabs in the error state, even for the owner', async () => {
+      answer(myAds(1), failResult(500))
+      renderPage('/creators/creator-1', 'loggedIn', owner)
+
+      expect(await screen.findByText(ERROR_TEXT)).toBeInTheDocument()
+      expect(screen.queryByRole('tablist')).toBeNull()
+      expect(mineCalls()).toHaveLength(0)
+    })
+
+    it('sends the owner to the login page when /mine answers 401', async () => {
+      answer(failResult(401))
+      renderPage('/creators/creator-1', 'loggedIn', owner)
+
+      expect(
+        await screen.findByRole('heading', { name: 'Login probe' }),
+      ).toBeInTheDocument()
+    })
+
+    it('does not send a visitor to the login page when the public profile loads', async () => {
+      answer(failResult(401))
+      renderPage('/creators/creator-1', 'loggedOut')
+
+      expect(await screen.findByText('Ad 1')).toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Login probe' })).toBeNull()
+    })
+
+    it('ignores myAdsPage in a visitor URL', async () => {
+      answer(myAds(1))
+      renderPage('/creators/creator-1?myAdsPage=3', 'loggedOut')
+
+      expect(await screen.findByText('Ad 1')).toBeInTheDocument()
+      expect(lastCall()[1].params.query).toEqual({ page: 1, pageSize: 20 })
+      expect(mineCalls()).toHaveLength(0)
+    })
+
+    it('keeps the public page key when the owner pages through My ads', async () => {
+      const user = userEvent.setup()
+      get.mockImplementation(
+        (url: string, options: { params: { query: { page: number } } }) => {
+          if (url !== '/api/pet-ads/mine') {
+            return Promise.resolve(
+              okResult(creatorProfileBody('Anna', ads(20), 45, 2)),
+            )
+          }
+          const page = options.params.query.page
+          return Promise.resolve(
+            okResult({
+              items: [
+                sampleListItem({
+                  id: `mine-${page}`,
+                  title: `Mine page ${page}`,
+                }),
+              ],
+              totalCount: 45,
+              page,
+              pageSize: 20,
+            }),
+          )
+        },
+      )
+      renderPage('/creators/creator-1?page=2', 'loggedIn', owner)
+
+      await user.click(await screen.findByRole('button', { name: 'Next' }))
+
+      expect(await screen.findByText('Mine page 2')).toBeInTheDocument()
+      expect(
+        screen.getByText('URL: /creators/creator-1?page=2&myAdsPage=2'),
+      ).toBeInTheDocument()
+    })
+
+    it('uses myAdsPage for My ads and page for the public profile request', async () => {
+      answer(myAds(1))
+      renderPage('/creators/creator-1?page=2&myAdsPage=3', 'loggedIn', owner)
+
+      await screen.findByText('Mine 1')
+
+      expect(mineCalls()[0][1].params.query).toEqual({ page: 3, pageSize: 20 })
+      const publicCall = get.mock.calls.find(
+        ([url]) => url !== '/api/pet-ads/mine',
+      )
+      expect(publicCall?.[1].params.query).toEqual({ page: 2, pageSize: 20 })
+    })
+
+    it('keeps focus on the single tab when Home and End are pressed', async () => {
+      const user = userEvent.setup()
+      answer(myAds(1))
+      renderPage('/creators/creator-1', 'loggedIn', owner)
+      await screen.findByText('Mine 1')
+      const tab = screen.getByRole('tab', { name: 'My ads' })
+      tab.focus()
+
+      await user.keyboard('{Home}')
+      expect(tab).toHaveFocus()
+      await user.keyboard('{End}')
+
+      expect(tab).toHaveFocus()
+      expect(tab).toHaveAttribute('aria-selected', 'true')
     })
   })
 })
