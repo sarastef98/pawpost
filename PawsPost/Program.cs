@@ -108,7 +108,16 @@ var app = builder.Build();
 // One-off maintenance mode: run the re-embedding step, print the result and exit without starting the server.
 if (args.Contains(PetAdReindexCommand.Name))
 {
-    return await PetAdReindexCommand.RunAsync(app.Services, Console.Out, CancellationToken.None);
+    // The host is not started here, so Ctrl+C is wired to the token directly.
+    // e.Cancel keeps the process alive long enough to stop between ads cleanly.
+    using var cancellation = new CancellationTokenSource();
+    Console.CancelKeyPress += (_, e) =>
+    {
+        e.Cancel = true;
+        cancellation.Cancel();
+    };
+
+    return await PetAdReindexCommand.RunAsync(app.Services, Console.Out, cancellation.Token);
 }
 
 // Configure the HTTP request pipeline.

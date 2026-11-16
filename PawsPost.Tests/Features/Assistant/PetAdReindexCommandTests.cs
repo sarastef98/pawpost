@@ -50,6 +50,25 @@ public class PetAdReindexCommandTests
     }
 
     [Fact]
+    public async Task RunAsync_TokenCancelled_StopsWithoutIndexing()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var ownerId = await factory.SeedOwnerAsync(OwnerEmail);
+        var ad = BuildSearchAd(ownerId, "Calm dog");
+        await factory.SeedAdsAsync(ad);
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        // Act
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => PetAdReindexCommand.RunAsync(factory.Services, new StringWriter(), cancellation.Token));
+
+        // Assert
+        Assert.False(factory.VectorStore.Contains(ad.Id));
+    }
+
+    [Fact]
     public async Task RunAsync_Output_HasCountsAndNoPersonalData()
     {
         // Arrange
