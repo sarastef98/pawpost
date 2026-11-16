@@ -40,3 +40,32 @@ describe('HomePage', () => {
     ).toBeInTheDocument()
   })
 })
+
+describe('HomePage notice', () => {
+  function renderHomeWithState(state?: unknown) {
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/', state }]}>
+        <HomePage />
+      </MemoryRouter>,
+    )
+  }
+
+  it('shows the closed notice when opened after closing an ad', async () => {
+    renderHomeWithState({ notice: 'Your ad was closed.' })
+
+    expect(await screen.findByText('Your ad was closed.')).toBeInTheDocument()
+    expect(screen.getByText('Your ad was closed.')).toHaveAttribute(
+      'role',
+      'status',
+    )
+  })
+
+  it('shows no notice text when opened directly', async () => {
+    renderHomeWithState()
+
+    await screen.findByText(
+      'Find a new friend or help a pet find a loving home.',
+    )
+    expect(screen.queryByText('Your ad was closed.')).toBeNull()
+  })
+})

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {
   MemoryRouter,
@@ -10,7 +10,13 @@ import {
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
 import { client } from '../../api/client'
-import { deferred, failResult, okResult } from '../../test/apiResponses'
+import Notice from '../../components/Notice'
+import {
+  deferred,
+  failResult,
+  noContentResult,
+  okResult,
+} from '../../test/apiResponses'
 import { AuthContext } from '../auth/useAuth'
 import type { AuthStatus } from '../auth/useAuth'
 import PetAdDetailsPage from './PetAdDetailsPage'
@@ -475,4 +481,170 @@ describe('PetAdDetailsPage creator', () => {
       expect(screen.queryByText('Posted by')).not.toBeInTheDocument()
     },
   )
+})
+
+describe('PetAdDetailsPage close ad', () => {
+  const post = client.POST as unknown as Mock
+
+  beforeEach(() => {
+    get.mockReset()
+    post.mockReset()
+  })
+
+  function renderOwnerPage(
+    userId: string | null,
+    status: AuthStatus = 'loggedIn',
+  ) {
+    const value = {
+      status,
+      user: userId === null ? null : { id: userId, email: 'sara@example.com' },
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+    }
+    render(
+      <AuthContext.Provider value={value}>
+        <MemoryRouter
+          initialEntries={['/start', '/pet-ads/ad-1']}
+          initialIndex={1}
+        >
+          <Routes>
+            <Route path="/start" element={<h1>Start probe</h1>} />
+            <Route path="/login" element={<h1>Login probe</h1>} />
+            <Route
+              path="/"
+              element={
+                <>
+                  <h1>Home probe</h1>
+                  <Notice />
+                  <BackButton />
+                </>
+              }
+            />
+            <Route path="/pet-ads/:id" element={<PetAdDetailsPage />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>,
+    )
+    return userEvent.setup()
+  }
+
+  async function confirmClose(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(await screen.findByRole('button', { name: 'Close ad' }))
+    const dialog = await screen.findByRole('dialog')
+    await user.click(within(dialog).getByRole('button', { name: 'Close ad' }))
+  }
+
+  const owned = { creator: { id: 'ABC-owner', displayName: 'Anna' } }
+
+  it('shows Close ad to the logged-in owner', async () => {
+    get.mockResolvedValue(okResult(adBody(owned)))
+    renderOwnerPage('ABC-owner')
+
+    expect(
+      await screen.findByRole('button', { name: 'Close ad' }),
+    ).toBeInTheDocument()
+  })
+
+  it('recognises the owner when the ids differ only in letter case', async () => {
+    get.mockResolvedValue(okResult(adBody(owned)))
+    renderOwnerPage('abc-OWNER')
+
+    expect(
+      await screen.findByRole('button', { name: 'Close ad' }),
+    ).toBeInTheDocument()
+  })
+
+  it('does not show Close ad to another logged-in user', async () => {
+    get.mockResolvedValue(okResult(adBody(owned)))
+    renderOwnerPage('someone-else')
+
+    await screen.findByRole('heading', { level: 1, name: 'Friendly Rex' })
+    expect(screen.queryByRole('button', { name: 'Close ad' })).toBeNull()
+  })
+
+  it('does not show Close ad when the ad has no creator', async () => {
+    get.mockResolvedValue(okResult(adBody({ creator: undefined })))
+    renderOwnerPage('ABC-owner')
+
+    await screen.findByRole('heading', { level: 1, name: 'Friendly Rex' })
+    expect(screen.queryByRole('button', { name: 'Close ad' })).toBeNull()
+  })
+
+  it('sends a visitor to the login page and never shows Close ad', async () => {
+    renderOwnerPage(null, 'loggedOut')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Login probe' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Close ad' })).toBeNull()
+  })
+
+  it('shows no reserve option or other status action to the owner', async () => {
+    get.mockResolvedValue(okResult(adBody(owned)))
+    renderOwnerPage('ABC-owner')
+
+    await screen.findByRole('button', { name: 'Close ad' })
+    expect(screen.queryByRole('button', { name: /reserve/i })).toBeNull()
+  })
+
+  it('opens the home page with the closed notice after a successful close', async () => {
+    get.mockResolvedValue(okResult(adBody(owned)))
+    post.mockResolvedValue(noContentResult())
+    const user = renderOwnerPage('ABC-owner')
+
+    await confirmClose(user)
+
+    expect(
+      await screen.findByRole('heading', { name: 'Home probe' }),
+    ).toBeInTheDocument()
+    expect(await screen.findByText('Your ad was closed.')).toBeInTheDocument()
+  })
+
+  it('does not return to the closed ad on Back', async () => {
+    get.mockResolvedValue(okResult(adBody(owned)))
+    post.mockResolvedValue(noContentResult())
+    const user = renderOwnerPage('ABC-owner')
+    await confirmClose(user)
+    await screen.findByRole('heading', { name: 'Home probe' })
+
+    await user.click(screen.getByRole('button', { name: 'Go back' }))
+
+    expect(
+      await screen.findByRole('heading', { name: 'Start probe' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Friendly Rex' })).toBeNull()
+  })
+
+  it('shows the message on 409 and, after OK, the not found text with focus on the heading', async () => {
+    get.mockResolvedValueOnce(okResult(adBody(owned)))
+    get.mockResolvedValueOnce(failResult(404))
+    post.mockResolvedValue(failResult(409))
+    const user = renderOwnerPage('ABC-owner')
+
+    await confirmClose(user)
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'This ad is already closed or no longer exists.',
+    )
+    await user.click(screen.getByRole('button', { name: 'OK' }))
+
+    expect(await screen.findByText(NOT_FOUND_TEXT)).toBeInTheDocument()
+    const heading = screen.getByRole('heading', {
+      level: 1,
+      name: 'Ad details',
+    })
+    await waitFor(() => expect(heading).toHaveFocus())
+  })
+
+  it('opens the login page when the close answers 401', async () => {
+    get.mockResolvedValue(okResult(adBody(owned)))
+    post.mockResolvedValue(failResult(401))
+    const user = renderOwnerPage('ABC-owner')
+
+    await confirmClose(user)
+
+    expect(
+      await screen.findByRole('heading', { name: 'Login probe' }),
+    ).toBeInTheDocument()
+  })
 })
