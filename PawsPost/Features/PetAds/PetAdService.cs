@@ -178,7 +178,7 @@ public class PetAdService(
             return ClosePetAdOutcome.NotActive;
         }
 
-        await TryRemoveFromIndexAsync(ad.Id, cancellationToken);
+        await TryRemoveFromIndexAsync(ad.Id);
 
         return ClosePetAdOutcome.Closed;
     }
@@ -239,11 +239,13 @@ public class PetAdService(
     // The ad is already closed and saved, so a failed removal must not fail the close.
     // Search skips non-Active ads anyway. All exceptions are caught here, because removal only
     // touches the vector store. Only the ad id and the exception type are logged, never the exception message.
-    private async Task TryRemoveFromIndexAsync(Guid petAdId, CancellationToken cancellationToken)
+    // CancellationToken.None on purpose: once the close is committed, a client that disconnects must not stop
+    // the cleanup, and a cancelled request must not be logged as an index failure.
+    private async Task TryRemoveFromIndexAsync(Guid petAdId)
     {
         try
         {
-            await searchIndexer.RemoveAsync(petAdId, cancellationToken);
+            await searchIndexer.RemoveAsync(petAdId, CancellationToken.None);
         }
         catch (Exception exception)
         {
