@@ -69,6 +69,18 @@ else
 
 builder.Services.AddScoped<IVectorStore, SqliteVectorStore>();
 builder.Services.AddScoped<IPetAdSearchIndexer, PetAdSearchIndexer>();
+builder.Services.AddScoped<IAssistantService, AssistantService>();
+
+builder.Services
+    .AddOptions<AssistantOptions>()
+    .Bind(builder.Configuration.GetSection(AssistantOptions.SectionName))
+    .Validate(
+        options => options.MaxResults is >= 1 and <= AssistantOptions.MaxResultsUpperLimit,
+        $"Assistant:MaxResults must be between 1 and {AssistantOptions.MaxResultsUpperLimit}.")
+    .Validate(
+        options => options.MinSimilarity is >= -1 and <= 1,
+        "Assistant:MinSimilarity must be between -1 and 1.")
+    .ValidateOnStart();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
