@@ -1,9 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using PawsPost.Data;
+using PawsPost.Features.Assistant;
 
 namespace PawsPost.Features.PetAds;
 
-public class PetAdService(AppDbContext dbContext, TimeProvider timeProvider) : IPetAdService
+public class PetAdService(
+    AppDbContext dbContext,
+    TimeProvider timeProvider,
+    IPetAdSearchIndexer searchIndexer,
+    ILogger<PetAdService> logger) : IPetAdService
 {
     public async Task<PetAdResponse> CreateAsync(
         Guid ownerId, CreatePetAdRequest request, CancellationToken cancellationToken)
@@ -29,6 +34,8 @@ public class PetAdService(AppDbContext dbContext, TimeProvider timeProvider) : I
 
         dbContext.PetAds.Add(ad);
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        await TryIndexAsync(ad, cancellationToken);
 
         return new PetAdResponse(
             ad.Id, ad.Title, ad.Type, ad.Species, ad.Breed, ad.AgeInMonths, ad.Description,
@@ -120,6 +127,25 @@ public class PetAdService(AppDbContext dbContext, TimeProvider timeProvider) : I
         return new PetAdDetailsResponse(
             row.Id, row.Title, row.Type, row.Species, row.Breed, row.AgeInMonths, row.Description,
             row.Price, row.Location, row.Status, DateTime.SpecifyKind(row.CreatedAt, DateTimeKind.Utc));
+    }
+
+    // The ad is already saved. If embedding fails, the ad stays and is just not searchable yet.
+    // Only the ad id and the exception type are logged, never ad text or provider details.
+    private async Task TryIndexAsync(PetAd ad, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await searchIndexer.IndexAsync(
+                new PetAdSearchText(
+                    ad.Id, ad.Title, ad.Type, ad.Species, ad.Breed, ad.AgeInMonths, ad.Description, ad.Location),
+                cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            logger.LogWarning(
+                "Could not embed pet ad {PetAdId} ({ExceptionType}). It is not searchable yet.",
+                ad.Id, exception.GetType().Name);
+        }
     }
 
     private static string? NullIfEmpty(string? value)
