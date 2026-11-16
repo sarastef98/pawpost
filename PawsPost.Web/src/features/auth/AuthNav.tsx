@@ -9,7 +9,7 @@ const linkClasses =
   'inline-flex min-h-11 items-center text-base font-semibold text-primary'
 
 export default function AuthNav() {
-  const { status, logout } = useAuth()
+  const { status, user, logout } = useAuth()
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -47,7 +47,7 @@ export default function AuthNav() {
   }
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex flex-wrap items-center gap-4">
       {failed && (
         <p role="alert" className="text-sm text-danger">
           {LOGOUT_FAILED_MESSAGE}
@@ -59,6 +59,14 @@ export default function AuthNav() {
       <Link to="/pet-ads/new" className={linkClasses}>
         Post an ad
       </Link>
+      {user !== null && (
+        <Link
+          to={`/creators/${encodeURIComponent(user.id)}`}
+          className={linkClasses}
+        >
+          My profile
+        </Link>
+      )}
       <Button variant="secondary" onClick={handleLogout} disabled={busy}>
         Log out
       </Button>
