@@ -106,6 +106,49 @@ public class ReindexPetAdsTests
         Assert.Equal(new PetAdReindexResult(1, 1, 0), result);
     }
 
+    [Fact]
+    public async Task ReindexMissing_MoreAdsThanOneBatch_ChecksIndexedIdsInBatches()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var ownerId = await factory.SeedOwnerAsync(OwnerEmail);
+        var ads = BuildManySearchAds(ownerId, PetAdReindexService.IndexedIdsBatchSize + 1);
+        await factory.SeedAdsAsync(ads);
+
+        // Act
+        await factory.ReindexAsync();
+
+        // Assert
+        Assert.Equal(
+            [PetAdReindexService.IndexedIdsBatchSize, 1],
+            factory.VectorStore.IndexedIdsCallSizes);
+    }
+
+    [Fact]
+    public async Task ReindexMissing_IndexedAdInSecondBatch_IsNotSentToProviderAgain()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var ownerId = await factory.SeedOwnerAsync(OwnerEmail);
+        var ads = BuildManySearchAds(ownerId, PetAdReindexService.IndexedIdsBatchSize + 1);
+        var lastAd = ads[^1];
+        lastAd.Title = "Lastindexed dog";
+        await factory.SeedAdsAsync(ads);
+        await factory.IndexAdsAsync(lastAd);
+        var callsBefore = factory.EmbeddingProvider.Calls.Count;
+
+        // Act
+        var result = await factory.ReindexAsync();
+
+        // Assert
+        var newCalls = factory.EmbeddingProvider.Calls.Skip(callsBefore).ToList();
+        Assert.DoesNotContain(newCalls, call => call.Text.Contains("Lastindexed"));
+        Assert.Equal(
+            new PetAdReindexResult(
+                PetAdReindexService.IndexedIdsBatchSize, PetAdReindexService.IndexedIdsBatchSize, 0),
+            result);
+    }
+
     [Theory]
     [InlineData(PetAdStatus.Draft)]
     [InlineData(PetAdStatus.Reserved)]
@@ -313,4 +356,10 @@ public class ReindexPetAdsTests
             Assert.DoesNotContain("phone", call.Text, StringComparison.OrdinalIgnoreCase);
         });
     }
+
+    // Each ad gets its own day, so the order (oldest first) and the last ad are fixed.
+    private static PetAd[] BuildManySearchAds(Guid ownerId, int count) =>
+        Enumerable.Range(0, count)
+            .Select(index => BuildSearchAd(ownerId, $"Dog {index}", dayOffset: index))
+            .ToArray();
 }

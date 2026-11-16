@@ -10,6 +10,13 @@ public class PetAdReindexService(
     IPetAdSearchIndexer indexer,
     ILogger<PetAdReindexService> logger) : IPetAdReindexService
 {
+    /// <summary>
+    /// How many ids are sent to <see cref="IVectorStore.GetIndexedIdsAsync"/> per call.
+    /// The SQLite store turns them into an <c>IN (...)</c> list, and SQLite limits bound parameters
+    /// (999 in older builds), so a big catalogue is checked in chunks.
+    /// </summary>
+    public const int IndexedIdsBatchSize = 400;
+
     public async Task<PetAdReindexResult> ReindexMissingAsync(CancellationToken cancellationToken)
     {
         var activeIds = await dbContext.PetAds
@@ -20,7 +27,12 @@ public class PetAdReindexService(
             .Select(ad => ad.Id)
             .ToListAsync(cancellationToken);
 
-        var indexedIds = await vectorStore.GetIndexedIdsAsync(activeIds, cancellationToken);
+        var indexedIds = new HashSet<Guid>();
+        foreach (var chunk in activeIds.Chunk(IndexedIdsBatchSize))
+        {
+            indexedIds.UnionWith(await vectorStore.GetIndexedIdsAsync(chunk, cancellationToken));
+        }
+
         var workList = activeIds.Where(id => !indexedIds.Contains(id)).ToList();
 
         var indexed = 0;

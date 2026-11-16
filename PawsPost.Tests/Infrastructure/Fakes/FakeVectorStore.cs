@@ -11,6 +11,20 @@ public class FakeVectorStore : IVectorStore
     /// <summary>When set, <see cref="UpsertAsync"/> throws it, to simulate a storage failure.</summary>
     public Exception? UpsertExceptionToThrow { get; set; }
 
+    private readonly List<int> _indexedIdsCallSizes = [];
+
+    /// <summary>How many ids each <see cref="GetIndexedIdsAsync"/> call received, in call order.</summary>
+    public IReadOnlyList<int> IndexedIdsCallSizes
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _indexedIdsCallSizes.ToList();
+            }
+        }
+    }
+
     public bool Contains(Guid petAdId)
     {
         lock (_lock)
@@ -49,6 +63,7 @@ public class FakeVectorStore : IVectorStore
     {
         lock (_lock)
         {
+            _indexedIdsCallSizes.Add(petAdIds.Count);
             IReadOnlySet<Guid> found = petAdIds.Where(_vectors.ContainsKey).ToHashSet();
             return Task.FromResult(found);
         }
