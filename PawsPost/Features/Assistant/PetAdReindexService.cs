@@ -41,6 +41,8 @@ public class PetAdReindexService(
         foreach (var id in workList)
         {
             // Loaded again, one at a time, so an ad closed since the first query is skipped.
+            // This is one query per missing ad (N+1) on purpose: the re-check of Active matters more
+            // than speed for a one-off maintenance command (plan decision D4).
             // Only the public fields are read; owner data never leaves the database here.
             var ad = await dbContext.PetAds
                 .AsNoTracking()
