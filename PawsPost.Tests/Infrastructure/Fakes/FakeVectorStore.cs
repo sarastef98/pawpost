@@ -44,6 +44,16 @@ public class FakeVectorStore : IVectorStore
         return Task.CompletedTask;
     }
 
+    public Task<IReadOnlySet<Guid>> GetIndexedIdsAsync(
+        IReadOnlyCollection<Guid> petAdIds, CancellationToken cancellationToken)
+    {
+        lock (_lock)
+        {
+            IReadOnlySet<Guid> found = petAdIds.Where(_vectors.ContainsKey).ToHashSet();
+            return Task.FromResult(found);
+        }
+    }
+
     public Task<IReadOnlyList<VectorMatch>> SearchAsync(
         float[] query, string model, int top, double minScore, CancellationToken cancellationToken)
     {

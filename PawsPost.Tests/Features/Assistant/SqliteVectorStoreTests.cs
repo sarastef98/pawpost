@@ -82,6 +82,24 @@ public class SqliteVectorStoreTests
     }
 
     [Fact]
+    public async Task GetIndexedIds_SomeIdsHaveVectors_ReturnsOnlyThose()
+    {
+        // Arrange
+        var (factory, ad) = await CreateFactoryWithAdAsync();
+        using var _ = factory;
+        using var scope = factory.Services.CreateScope();
+        var store = CreateStore(scope);
+        await store.UpsertAsync(ad.Id, [1f, 0f], Model, CancellationToken.None);
+        var otherId = Guid.NewGuid();
+
+        // Act
+        var found = await store.GetIndexedIdsAsync([ad.Id, otherId], CancellationToken.None);
+
+        // Assert
+        Assert.Equal(ad.Id, Assert.Single(found));
+    }
+
+    [Fact]
     public async Task Remove_ExistingVector_IsNoLongerFound()
     {
         // Arrange
