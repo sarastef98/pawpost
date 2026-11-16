@@ -26,3 +26,15 @@ export function toCreatorProfile(value: unknown): CreatorProfile | null {
 export function parseProfilePage(params: URLSearchParams): number {
   return parseListQuery(params).page
 }
+
+// Reads the "My ads" tab page from its own URL key, so it never mixes with the
+// public list's `page`. Same rules: anything that is not a positive whole
+// number gives page 1.
+export function parseMyAdsPage(params: URLSearchParams): number {
+  const value = params.get('myAdsPage')
+  return parseListQuery(
+    value === null
+      ? new URLSearchParams()
+      : new URLSearchParams({ page: value }),
+  ).page
+}
