@@ -59,13 +59,21 @@ public class PetAdReindexCommandTests
         await factory.SeedAdsAsync(ad);
         using var cancellation = new CancellationTokenSource();
         await cancellation.CancelAsync();
+        var output = new StringWriter();
 
         // Act
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => PetAdReindexCommand.RunAsync(factory.Services, new StringWriter(), cancellation.Token));
+        var exitCode = await PetAdReindexCommand.RunAsync(factory.Services, output, cancellation.Token);
 
         // Assert
+        var text = output.ToString();
+        Assert.Equal(PetAdReindexCommand.CancelledExitCode, exitCode);
+        Assert.Equal(130, exitCode);
+        Assert.Contains("Cancelled. Run again to continue.", text);
         Assert.False(factory.VectorStore.Contains(ad.Id));
+        Assert.DoesNotContain(OwnerEmail, text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Calm dog", text);
+        Assert.DoesNotContain(ad.Id.ToString(), text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(ownerId.ToString(), text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
