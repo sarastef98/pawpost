@@ -1,5 +1,7 @@
 import type { components } from '../../api/schema'
 import { toFiniteNumber } from './formatPrice'
+import { toPublicCreator } from './petAdCreator'
+import type { PublicCreator } from './petAdCreator'
 
 type Response = components['schemas']['PetAdDetailsResponse']
 
@@ -12,6 +14,7 @@ export type PetAdDetails = Pick<Response, 'id' | 'title' | 'description'> & {
   ageInMonths: number | null
   price: number | null
   location: string | null
+  creator: PublicCreator | null
 }
 
 function toText(value: unknown): string {
@@ -43,6 +46,7 @@ export function toPetAdDetails(value: unknown): PetAdDetails | null {
     description: data.description,
     price: toFiniteNumber(data.price),
     location: toOptionalText(data.location),
+    creator: toPublicCreator(data.creator),
   }
 }
 

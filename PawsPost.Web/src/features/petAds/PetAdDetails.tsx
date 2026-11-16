@@ -1,4 +1,5 @@
-import type { Ref } from 'react'
+import type { ReactNode, Ref } from 'react'
+import { Link } from 'react-router-dom'
 import Badge from '../../components/Badge'
 import Card from '../../components/Card'
 import { formatPrice } from './formatPrice'
@@ -10,7 +11,7 @@ type PetAdDetailsProps = {
   headingRef?: Ref<HTMLHeadingElement>
 }
 
-type Row = { label: string; value: string }
+type Row = { label: string; value: ReactNode }
 
 export default function PetAdDetails({ ad, headingRef }: PetAdDetailsProps) {
   const price = formatPrice(ad.type, ad.price)
@@ -22,6 +23,19 @@ export default function PetAdDetails({ ad, headingRef }: PetAdDetailsProps) {
   if (ad.breed) rows.push({ label: 'Breed', value: ad.breed })
   if (age) rows.push({ label: 'Age', value: age })
   if (ad.location) rows.push({ label: 'Location', value: ad.location })
+  if (ad.creator) {
+    rows.push({
+      label: 'Posted by',
+      value: (
+        <Link
+          to={`/creators/${encodeURIComponent(ad.creator.id)}`}
+          className="font-semibold text-primary underline"
+        >
+          {ad.creator.displayName}
+        </Link>
+      ),
+    })
+  }
 
   return (
     <Card className="flex flex-col gap-4">

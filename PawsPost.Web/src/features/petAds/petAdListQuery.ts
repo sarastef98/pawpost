@@ -1,4 +1,6 @@
 import { toFiniteNumber } from './formatPrice'
+import { toPublicCreator } from './petAdCreator'
+import type { PublicCreator } from './petAdCreator'
 
 export const PAGE_SIZE = 20
 export const MAX_SPECIES_LENGTH = 50
@@ -18,6 +20,7 @@ export type PetAdSummary = {
   type: string
   price: number | null
   location: string | null
+  creator: PublicCreator | null
 }
 
 export type PetAdListData = {
@@ -83,6 +86,7 @@ function toItem(value: unknown): PetAdSummary | null {
       typeof item.location === 'string' && item.location.trim() !== ''
         ? item.location
         : null,
+    creator: toPublicCreator(item.creator),
   }
 }
 

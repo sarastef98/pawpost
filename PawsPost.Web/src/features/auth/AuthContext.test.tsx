@@ -158,12 +158,20 @@ describe('AuthProvider register', () => {
 
     let outcome: unknown
     await act(async () => {
-      outcome = await result.current.register('sara@example.com', 'Secret1!')
+      outcome = await result.current.register(
+        'sara@example.com',
+        'Secret1!',
+        'Sara Test',
+      )
     })
 
     expect(outcome).toEqual({ ok: true })
     expect(post).toHaveBeenCalledWith('/api/auth/register', {
-      body: { email: 'sara@example.com', password: 'Secret1!' },
+      body: {
+        email: 'sara@example.com',
+        password: 'Secret1!',
+        displayName: 'Sara Test',
+      },
     })
     expect(result.current.status).toBe('loggedOut')
     expect(result.current.user).toBeNull()
@@ -177,7 +185,7 @@ describe('AuthProvider register', () => {
 
     let outcome: unknown
     await act(async () => {
-      outcome = await result.current.register('a@b.c', 'x')
+      outcome = await result.current.register('a@b.c', 'x', 'Sara Test')
     })
 
     expect(outcome).toEqual({
@@ -197,7 +205,7 @@ describe('AuthProvider register', () => {
 
     let outcome: unknown
     await act(async () => {
-      outcome = await result.current.register('a@b.c', 'x')
+      outcome = await result.current.register('a@b.c', 'x', 'Sara Test')
     })
 
     expect(outcome).toEqual({

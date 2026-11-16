@@ -77,11 +77,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const register = useCallback(
-    async (email: string, password: string): Promise<ActionResult> => {
+    async (
+      email: string,
+      password: string,
+      displayName: string,
+    ): Promise<ActionResult> => {
       try {
         const { data, error, response } = await client.POST(
           '/api/auth/register',
-          { body: { email, password } },
+          { body: { email, password, displayName } },
         )
         if (data) {
           return { ok: true }

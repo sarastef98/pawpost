@@ -30,6 +30,7 @@ describe('toPetAdDetails', () => {
       description: 'A calm dog.',
       price: 150.5,
       location: 'Skopje',
+      creator: null,
     })
   })
 
@@ -102,6 +103,33 @@ describe('formatAge', () => {
     'returns null for invalid input %j',
     (value) => {
       expect(formatAge(value)).toBeNull()
+    },
+  )
+})
+
+describe('toPetAdDetails creator', () => {
+  it('reads the creator', () => {
+    const ad = toPetAdDetails(
+      body({ creator: { id: 'c1', displayName: 'Anna' } }),
+    )
+
+    expect(ad?.creator).toEqual({ id: 'c1', displayName: 'Anna' })
+  })
+
+  it('returns the ad with a null creator when the creator is missing', () => {
+    const ad = toPetAdDetails(body())
+
+    expect(ad?.title).toBe('Friendly Rex')
+    expect(ad?.creator).toBeNull()
+  })
+
+  it.each([null, 'Anna', { id: '', displayName: 'Anna' }, { id: 'c1' }])(
+    'returns the ad with a null creator when the creator is %j',
+    (creator) => {
+      const ad = toPetAdDetails(body({ creator }))
+
+      expect(ad?.title).toBe('Friendly Rex')
+      expect(ad?.creator).toBeNull()
     },
   )
 })

@@ -26,6 +26,11 @@ export default function PetAdCard({ ad }: PetAdCardProps) {
         {ad.location && (
           <p className="text-sm break-words text-muted">{ad.location}</p>
         )}
+        {ad.creator && (
+          <p className="text-sm break-words text-muted">
+            By {ad.creator.displayName}
+          </p>
+        )}
       </Card>
     </Link>
   )

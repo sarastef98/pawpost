@@ -14,7 +14,11 @@ export type AuthContextValue = {
   status: AuthStatus
   user: User | null
   login: (email: string, password: string) => Promise<ActionResult>
-  register: (email: string, password: string) => Promise<ActionResult>
+  register: (
+    email: string,
+    password: string,
+    displayName: string,
+  ) => Promise<ActionResult>
   logout: () => Promise<LogoutResult>
 }
 

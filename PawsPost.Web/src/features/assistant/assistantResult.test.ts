@@ -75,3 +75,30 @@ describe('toAssistantResult', () => {
     expect(result?.ads[0].ageInMonths).toBe(14)
   })
 })
+
+describe('toAssistantResult creator', () => {
+  it('keeps the creator of each ad', () => {
+    const result = toAssistantResult({
+      answer: 'Hi',
+      ads: [
+        ad({ creator: { id: 'c1', displayName: 'Anna' } }),
+        ad({ id: 'ad-2', creator: { id: 'c2', displayName: 'Boris' } }),
+      ],
+    })
+
+    expect(result?.ads.map((a) => a.creator)).toEqual([
+      { id: 'c1', displayName: 'Anna' },
+      { id: 'c2', displayName: 'Boris' },
+    ])
+  })
+
+  it('keeps an ad with an unreadable creator and gives it a null creator', () => {
+    const result = toAssistantResult({
+      answer: 'Hi',
+      ads: [ad({ creator: { id: '' } }), ad({ id: 'ad-2' })],
+    })
+
+    expect(result?.ads.map((a) => a.id)).toEqual(['ad-1', 'ad-2'])
+    expect(result?.ads.map((a) => a.creator)).toEqual([null, null])
+  })
+})
