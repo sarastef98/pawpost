@@ -5,6 +5,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using PawsPost.Common;
 using PawsPost.Data;
+using PawsPost.Features.Ai;
+using PawsPost.Features.Ai.VectorStores;
+using PawsPost.Features.Assistant;
 using PawsPost.Features.Auth;
 using PawsPost.Features.PetAds;
 
@@ -52,6 +55,8 @@ builder.Services
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IPetAdService, PetAdService>();
+builder.Services.AddScoped<IVectorStore, SqliteVectorStore>();
+builder.Services.AddScoped<IPetAdSearchIndexer, PetAdSearchIndexer>();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
