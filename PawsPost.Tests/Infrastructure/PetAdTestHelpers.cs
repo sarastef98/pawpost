@@ -121,6 +121,12 @@ public static class PetAdTestHelpers
         return client.GetAsync(string.IsNullOrEmpty(query) ? url : $"{url}?{query}");
     }
 
+    public static Task<HttpResponseMessage> GetMyClosedPetAdsAsync(this HttpClient client, string? query = null)
+    {
+        var url = $"{PetAdsUrl}/mine/closed";
+        return client.GetAsync(string.IsNullOrEmpty(query) ? url : $"{url}?{query}");
+    }
+
     /// <summary>A PetAd with fixed values. Pass the owner id of a seeded user.</summary>
     public static PetAd BuildPetAd(
         Guid ownerId,

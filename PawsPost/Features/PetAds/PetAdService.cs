@@ -82,12 +82,25 @@ public class PetAdService(
         return new PetAdListResponse(rows.Select(ToListItem).ToList(), totalCount, request.Page, request.PageSize);
     }
 
-    public async Task<PetAdListResponse> ListActiveByOwnerAsync(
+    public Task<PetAdListResponse> ListActiveByOwnerAsync(
         Guid ownerId, int page, int pageSize, CancellationToken cancellationToken)
+    {
+        return ListByOwnerAsync(ownerId, PetAdStatus.Active, page, pageSize, cancellationToken);
+    }
+
+    public Task<PetAdListResponse> ListClosedByOwnerAsync(
+        Guid ownerId, int page, int pageSize, CancellationToken cancellationToken)
+    {
+        return ListByOwnerAsync(ownerId, PetAdStatus.Closed, page, pageSize, cancellationToken);
+    }
+
+    // One per-owner query for every status. The status is fixed by the public methods above, never by a caller.
+    private async Task<PetAdListResponse> ListByOwnerAsync(
+        Guid ownerId, PetAdStatus status, int page, int pageSize, CancellationToken cancellationToken)
     {
         var query = dbContext.PetAds
             .AsNoTracking()
-            .Where(petAd => petAd.OwnerId == ownerId && petAd.Status == PetAdStatus.Active);
+            .Where(petAd => petAd.OwnerId == ownerId && petAd.Status == status);
 
         var totalCount = await query.CountAsync(cancellationToken);
 
