@@ -39,6 +39,20 @@ public class PetAdsController(IPetAdService petAdService) : ControllerBase
         return Ok(page);
     }
 
+    // The owner always comes from the login cookie, never from the request.
+    // The service returns only Closed ads. Read-only: nothing is changed or reopened.
+    [HttpGet("mine/closed")]
+    [ProducesResponseType<PetAdListResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ListMineClosedAsync(
+        [FromQuery] MyPetAdsRequest request, CancellationToken cancellationToken)
+    {
+        var page = await petAdService.ListClosedByOwnerAsync(
+            User.GetUserId(), request.Page, request.PageSize, cancellationToken);
+        return Ok(page);
+    }
+
     // No [AllowAnonymous]: the class-level [Authorize] applies, so login is required.
     // Unknown ids and ads that are not Active both give 404.
     [HttpGet("{id}", Name = GetByIdRouteName)]

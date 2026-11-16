@@ -88,6 +88,12 @@ public class PetAdService(
         return ListByOwnerAsync(ownerId, PetAdStatus.Active, page, pageSize, cancellationToken);
     }
 
+    public Task<PetAdListResponse> ListClosedByOwnerAsync(
+        Guid ownerId, int page, int pageSize, CancellationToken cancellationToken)
+    {
+        return ListByOwnerAsync(ownerId, PetAdStatus.Closed, page, pageSize, cancellationToken);
+    }
+
     // One per-owner query for every status. The status is fixed by the public methods above, never by a caller.
     private async Task<PetAdListResponse> ListByOwnerAsync(
         Guid ownerId, PetAdStatus status, int page, int pageSize, CancellationToken cancellationToken)
