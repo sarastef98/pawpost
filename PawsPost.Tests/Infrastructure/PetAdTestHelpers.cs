@@ -73,6 +73,18 @@ public static class PetAdTestHelpers
         return await db.PetAds.AsNoTracking().ToListAsync();
     }
 
+    public static Task<HttpResponseMessage> ClosePetAdAsync(this HttpClient client, string id)
+    {
+        return client.PostAsync($"{PetAdsUrl}/{id}/close", content: null);
+    }
+
+    public static async Task<PetAd?> GetStoredAdAsync(this WebApplicationFactory<Program> factory, Guid id)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        return await db.PetAds.AsNoTracking().SingleOrDefaultAsync(petAd => petAd.Id == id);
+    }
+
     public static Task<HttpResponseMessage> GetPetAdsAsync(this HttpClient client, string? query = null)
     {
         return client.GetAsync(string.IsNullOrEmpty(query) ? PetAdsUrl : $"{PetAdsUrl}?{query}");

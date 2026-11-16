@@ -145,6 +145,34 @@ public class PetAdService(
             new PetAdCreatorResponse(row.CreatorId, row.CreatorDisplayName));
     }
 
+    public async Task<ClosePetAdOutcome> CloseAsync(
+        Guid petAdId, Guid callerId, CancellationToken cancellationToken)
+    {
+        // Tracked on purpose: the ad is updated below.
+        var ad = await dbContext.PetAds.SingleOrDefaultAsync(petAd => petAd.Id == petAdId, cancellationToken);
+        if (ad is null)
+        {
+            return ClosePetAdOutcome.NotFound;
+        }
+
+        // Ownership is checked before the status, so a non-owner never learns the status.
+        if (ad.OwnerId != callerId)
+        {
+            return ClosePetAdOutcome.NotOwner;
+        }
+
+        if (ad.Status != PetAdStatus.Active)
+        {
+            return ClosePetAdOutcome.NotActive;
+        }
+
+        // Soft close: the row stays.
+        ad.Status = PetAdStatus.Closed;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return ClosePetAdOutcome.Closed;
+    }
+
     // One projection for every list of ads, so all list items have exactly the same public fields.
     // It reads only the creator's id and display name, never the email, phone or user name.
     private static readonly Expression<Func<PetAd, ListItemRow>> ListItemSelector = petAd => new ListItemRow(

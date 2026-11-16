@@ -10,4 +10,6 @@ public interface IPetAdService
 
     Task<PetAdListResponse> ListActiveByOwnerAsync(
         Guid ownerId, int page, int pageSize, CancellationToken cancellationToken);
+
+    Task<ClosePetAdOutcome> CloseAsync(Guid petAdId, Guid callerId, CancellationToken cancellationToken);
 }
