@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using PawsPost.Data;
 using PawsPost.Features.Ai.VectorStores;
+using PawsPost.Features.Assistant;
 using PawsPost.Tests.Infrastructure;
 using static PawsPost.Tests.Infrastructure.AssistantTestHelpers;
 using static PawsPost.Tests.Infrastructure.PetAdTestHelpers;
@@ -97,6 +99,65 @@ public class SqliteVectorStoreTests
 
         // Assert
         Assert.Equal(ad.Id, Assert.Single(found));
+    }
+
+    [Fact]
+    public async Task GetIndexedIds_EmptyInput_ReturnsEmptySet()
+    {
+        // Arrange
+        var (factory, ad) = await CreateFactoryWithAdAsync();
+        using var _ = factory;
+        using var scope = factory.Services.CreateScope();
+        var store = CreateStore(scope);
+        await store.UpsertAsync(ad.Id, [1f, 0f], Model, CancellationToken.None);
+
+        // Act
+        var found = await store.GetIndexedIdsAsync([], CancellationToken.None);
+
+        // Assert
+        Assert.Empty(found);
+    }
+
+    [Fact]
+    public async Task GetIndexedIds_VectorOfOtherModel_CountsAsIndexed()
+    {
+        // Arrange
+        var (factory, ad) = await CreateFactoryWithAdAsync();
+        using var _ = factory;
+        using var scope = factory.Services.CreateScope();
+        var store = CreateStore(scope);
+        await store.UpsertAsync(ad.Id, [1f, 0f], "other-model", CancellationToken.None);
+
+        // Act
+        var found = await store.GetIndexedIdsAsync([ad.Id], CancellationToken.None);
+
+        // Assert
+        Assert.Equal(ad.Id, Assert.Single(found));
+    }
+
+    [Fact]
+    public async Task ReindexMissing_SecondRun_KeepsOneVectorPerAd()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var ownerId = await factory.SeedOwnerAsync("owner@x.com");
+        await factory.SeedAdsAsync(
+            BuildSearchAd(ownerId, "Dog one"),
+            BuildSearchAd(ownerId, "Cat two", PetSpecies.Cat, dayOffset: 1));
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var store = CreateStore(scope);
+        var indexer = new PetAdSearchIndexer(factory.EmbeddingProvider, store);
+        var service = new PetAdReindexService(db, store, indexer, NullLogger<PetAdReindexService>.Instance);
+
+        // Act
+        await service.ReindexMissingAsync(CancellationToken.None);
+        var second = await service.ReindexMissingAsync(CancellationToken.None);
+
+        // Assert
+        Assert.Equal(0, second.Missing);
+        Assert.Equal(2, await db.PetAdEmbeddings.CountAsync());
+        Assert.Equal(2, await db.PetAdEmbeddings.Select(item => item.PetAdId).Distinct().CountAsync());
     }
 
     [Fact]
