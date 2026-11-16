@@ -403,8 +403,12 @@ describe('MyAdsTab close ad', { timeout: 15_000 }, () => {
 
     await closeAd(user, 'Ad 1')
 
-    await waitFor(() => expect(screen.queryByText('Ad 1')).toBeNull())
-    expect(screen.getByText('Ad 2')).toBeInTheDocument()
+    // Ad 1 is also gone while the spinner shows during the reload, so wait
+    // until the reloaded list is there with Ad 2 and without Ad 1.
+    await waitFor(() => {
+      expect(screen.getByText('Ad 2')).toBeInTheDocument()
+      expect(screen.queryByText('Ad 1')).toBeNull()
+    })
   })
 
   it('shows the empty state together with the message after closing the only ad', async () => {
