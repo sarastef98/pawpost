@@ -170,6 +170,8 @@ public class PetAdService(
         ad.Status = PetAdStatus.Closed;
         await dbContext.SaveChangesAsync(cancellationToken);
 
+        await TryRemoveFromIndexAsync(ad.Id, cancellationToken);
+
         return ClosePetAdOutcome.Closed;
     }
 
@@ -223,6 +225,23 @@ public class PetAdService(
             logger.LogWarning(
                 "Could not embed pet ad {PetAdId} ({ExceptionType}): {Reason} It is not searchable yet.",
                 ad.Id, exception.GetType().Name, exception.Message);
+        }
+    }
+
+    // The ad is already closed and saved, so a failed removal must not fail the close.
+    // Search skips non-Active ads anyway. All exceptions are caught here, because removal only
+    // touches the vector store. Only the ad id and the exception type are logged, never the exception message.
+    private async Task TryRemoveFromIndexAsync(Guid petAdId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await searchIndexer.RemoveAsync(petAdId, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                "Could not remove pet ad {PetAdId} from the search index ({ExceptionType}). Search already skips closed ads.",
+                petAdId, exception.GetType().Name);
         }
     }
 
