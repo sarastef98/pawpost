@@ -385,6 +385,24 @@ public class ListMyClosedPetAdsTests
     }
 
     [Fact]
+    public async Task ListMyClosedPetAds_MaxIntPage_ReturnsEmptyItemsWithTotalCount()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("owner@x.com", "Anna K");
+        await factory.SeedAdsAsync(SeedClosedAds(await client.GetMyIdAsync(), 3));
+
+        // Act
+        var response = await client.GetMyClosedPetAdsAsync("page=2147483647&pageSize=100");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = await ReadJsonAsync(response);
+        Assert.Equal(0, json.RootElement.GetProperty("items").GetArrayLength());
+        Assert.Equal(3, json.RootElement.GetProperty("totalCount").GetInt32());
+    }
+
+    [Fact]
     public async Task ListMyClosedPetAds_PageSizeExactly100_Returns200()
     {
         // Arrange
