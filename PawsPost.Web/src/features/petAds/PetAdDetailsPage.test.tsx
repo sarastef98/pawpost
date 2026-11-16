@@ -65,6 +65,7 @@ function renderPage(status: AuthStatus = 'loggedIn', url = '/pet-ads/ad-1') {
         <Routes>
           <Route path="/login" element={<h1>Login probe</h1>} />
           <Route path="/" element={<h1>Home probe</h1>} />
+          <Route path="/creators/:id" element={<h1>Creator probe</h1>} />
           <Route
             path="/pet-ads/:id"
             element={
@@ -423,4 +424,55 @@ describe('PetAdDetailsPage notice', () => {
     await screen.findByRole('heading', { level: 1, name: 'Friendly Rex' })
     expect(screen.getByRole('status')).toBeEmptyDOMElement()
   })
+})
+
+describe('PetAdDetailsPage creator', () => {
+  beforeEach(() => {
+    get.mockReset()
+  })
+
+  it('shows Posted by with a link that opens the creator profile', async () => {
+    get.mockResolvedValue(
+      okResult(adBody({ creator: { id: 'c1', displayName: 'Anna' } })),
+    )
+    renderPage()
+
+    const link = await screen.findByRole('link', { name: 'Anna' })
+    expect(screen.getByText('Posted by')).toBeInTheDocument()
+    expect(link).toHaveAttribute('href', '/creators/c1')
+
+    await userEvent.click(link)
+
+    expect(
+      await screen.findByRole('heading', { name: 'Creator probe' }),
+    ).toBeInTheDocument()
+  })
+
+  it('encodes the creator id in the link', async () => {
+    get.mockResolvedValue(
+      okResult(adBody({ creator: { id: 'a/b', displayName: 'Anna' } })),
+    )
+    renderPage()
+
+    expect(await screen.findByRole('link', { name: 'Anna' })).toHaveAttribute(
+      'href',
+      '/creators/a%2Fb',
+    )
+  })
+
+  it.each([
+    ['missing', undefined],
+    ['unreadable', { id: '', displayName: 5 }],
+  ])(
+    'hides the Posted by row and still shows the ad when the creator is %s',
+    async (_name, creator) => {
+      get.mockResolvedValue(okResult(adBody({ creator })))
+      renderPage()
+
+      expect(
+        await screen.findByRole('heading', { level: 1, name: 'Friendly Rex' }),
+      ).toBeInTheDocument()
+      expect(screen.queryByText('Posted by')).not.toBeInTheDocument()
+    },
+  )
 })

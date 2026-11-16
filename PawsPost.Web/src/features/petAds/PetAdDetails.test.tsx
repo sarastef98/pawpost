@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import PetAdDetails from './PetAdDetails'
 import type { PetAdDetails as Ad } from './petAdDetailsData'
@@ -88,5 +89,41 @@ describe('PetAdDetails', () => {
 
     expect(screen.queryByText(/@/)).not.toBeInTheDocument()
     expect(screen.queryByText(/phone|email/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('PetAdDetails creator', () => {
+  function renderWithRouter(creator: Ad['creator']) {
+    render(
+      <MemoryRouter>
+        <PetAdDetails ad={ad({ creator })} />
+      </MemoryRouter>,
+    )
+  }
+
+  it('shows Posted by with the name as a link to the creator profile', () => {
+    renderWithRouter({ id: 'c1', displayName: 'Anna' })
+
+    expect(screen.getByText('Posted by')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Anna' })).toHaveAttribute(
+      'href',
+      '/creators/c1',
+    )
+  })
+
+  it('encodes the creator id in the link', () => {
+    renderWithRouter({ id: 'a/b c?', displayName: 'Anna' })
+
+    expect(screen.getByRole('link', { name: 'Anna' })).toHaveAttribute(
+      'href',
+      '/creators/a%2Fb%20c%3F',
+    )
+  })
+
+  it('hides the Posted by row when the creator is missing', () => {
+    renderWithRouter(null)
+
+    expect(screen.queryByText('Posted by')).not.toBeInTheDocument()
+    expect(screen.getByText('A calm dog.')).toBeInTheDocument()
   })
 })
