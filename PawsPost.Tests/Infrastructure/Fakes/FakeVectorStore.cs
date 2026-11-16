@@ -67,6 +67,9 @@ public class FakeVectorStore : IVectorStore
 
     public Task RemoveAsync(Guid petAdId, CancellationToken cancellationToken)
     {
+        // Like the real store: a cancelled token stops the removal.
+        cancellationToken.ThrowIfCancellationRequested();
+
         lock (_lock)
         {
             _removedIds.Add(petAdId);
