@@ -18,8 +18,23 @@ public class AccountService(UserManager<User> userManager, SignInManager<User> s
             return RegisterResult.EmailAlreadyRegistered();
         }
 
+        var displayName = DisplayNameRules.Trim(request.DisplayName);
+        var normalizedDisplayName = DisplayNameRules.Normalize(displayName);
+
+        if (await userManager.Users.AsNoTracking()
+            .AnyAsync(item => item.NormalizedDisplayName == normalizedDisplayName, cancellationToken))
+        {
+            return RegisterResult.DisplayNameTaken();
+        }
+
         // The email is also the user name. Identity stores only a hash of the password.
-        var user = new User { UserName = email, Email = email };
+        var user = new User
+        {
+            UserName = email,
+            Email = email,
+            DisplayName = displayName,
+            NormalizedDisplayName = normalizedDisplayName
+        };
         IdentityResult result;
         try
         {
@@ -27,15 +42,21 @@ public class AccountService(UserManager<User> userManager, SignInManager<User> s
         }
         catch (DbUpdateException)
         {
-            // Another request may have registered the same email after both our check above and Identity's own
-            // duplicate check, so the unique NormalizedEmail index rejected the insert. Re-check that the email
-            // now exists; if it does not, the error has another cause and is rethrown so it is not hidden.
-            if (await userManager.FindByEmailAsync(email) is null)
+            // Another request may have registered the same email or display name after both our checks above and
+            // Identity's own duplicate check, so a unique index rejected the insert. Re-check which one now exists;
+            // if neither does, the error has another cause and is rethrown so it is not hidden.
+            if (await userManager.FindByEmailAsync(email) is not null)
             {
-                throw;
+                return RegisterResult.EmailAlreadyRegistered();
             }
 
-            return RegisterResult.EmailAlreadyRegistered();
+            if (await userManager.Users.AsNoTracking()
+                .AnyAsync(item => item.NormalizedDisplayName == normalizedDisplayName, cancellationToken))
+            {
+                return RegisterResult.DisplayNameTaken();
+            }
+
+            throw;
         }
 
         if (result.Succeeded)

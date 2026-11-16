@@ -4,7 +4,8 @@ public enum RegisterOutcome
 {
     Success,
     ValidationFailed,
-    EmailAlreadyRegistered
+    EmailAlreadyRegistered,
+    DisplayNameTaken
 }
 
 /// <summary>Outcome of a sign-up, so the controller can pick the status code without holding rules.</summary>
@@ -29,4 +30,6 @@ public class RegisterResult
         new(RegisterOutcome.ValidationFailed, null, errors);
 
     public static RegisterResult EmailAlreadyRegistered() => new(RegisterOutcome.EmailAlreadyRegistered, null, null);
+
+    public static RegisterResult DisplayNameTaken() => new(RegisterOutcome.DisplayNameTaken, null, null);
 }

@@ -104,8 +104,8 @@ public class AssistantSearchAccessTests
         Assert.DoesNotContain(OwnerEmail, text, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("email", text, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("phone", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("userName", text, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("ownerId", text, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain(ownerId.ToString(), text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -125,7 +125,7 @@ public class AssistantSearchAccessTests
         var ad = json.RootElement.GetProperty("ads").EnumerateArray().Single();
         var names = ad.EnumerateObject().Select(property => property.Name).Order().ToList();
         Assert.Equal(
-            ["ageInMonths", "breed", "createdAt", "description", "id", "location", "price", "species", "status", "title", "type"],
+            ["ageInMonths", "breed", "createdAt", "creator", "description", "id", "location", "price", "species", "status", "title", "type"],
             names);
     }
 

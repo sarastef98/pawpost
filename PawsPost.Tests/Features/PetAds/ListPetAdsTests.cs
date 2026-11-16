@@ -541,7 +541,7 @@ public class ListPetAdsTests
         using var json = await ReadJsonAsync(response);
         var item = Assert.Single(json.RootElement.GetProperty("items").EnumerateArray());
         var names = item.EnumerateObject().Select(property => property.Name).Order().ToList();
-        Assert.Equal(["createdAt", "id", "location", "price", "species", "title", "type"], names);
+        Assert.Equal(["createdAt", "creator", "id", "location", "price", "species", "title", "type"], names);
     }
 
     [Fact]
@@ -562,8 +562,52 @@ public class ListPetAdsTests
         Assert.DoesNotContain("secret.owner@x.com", text, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("email", text, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("phone", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("userName", text, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("ownerId", text, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain(ownerId.ToString(), text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ListPetAds_ActiveAd_IncludesCreatorIdAndDisplayName()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var ownerId = await factory.SeedOwnerAsync("owner@x.com", "Anna K");
+        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1));
+        var client = factory.CreateApiClient();
+
+        // Act
+        var response = await client.GetPetAdsAsync();
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = await ReadJsonAsync(response);
+        var item = Assert.Single(json.RootElement.GetProperty("items").EnumerateArray());
+        var creator = item.GetProperty("creator");
+        Assert.Equal(ownerId, creator.GetProperty("id").GetGuid());
+        Assert.Equal("Anna K", creator.GetProperty("displayName").GetString());
+        Assert.Equal(["displayName", "id"], creator.EnumerateObject().Select(property => property.Name).Order().ToList());
+    }
+
+    [Fact]
+    public async Task ListPetAds_AnyAd_HasNoEmailPhoneOrUserName()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var ownerId = await factory.SeedOwnerAsync("secret.owner@x.com", "Anna K");
+        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1));
+        var client = factory.CreateApiClient();
+
+        // Act
+        var response = await client.GetPetAdsAsync();
+
+        // Assert
+        var text = await response.Content.ReadAsStringAsync();
+        Assert.Contains("\"creator\"", text);
+        Assert.DoesNotContain("secret.owner@x.com", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("email", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("phone", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("userName", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("normalized", text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]

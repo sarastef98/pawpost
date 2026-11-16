@@ -7,4 +7,7 @@ public interface IPetAdService
     Task<PetAdListResponse> ListAsync(ListPetAdsRequest request, CancellationToken cancellationToken);
 
     Task<PetAdDetailsResponse?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
+
+    Task<PetAdListResponse> ListActiveByOwnerAsync(
+        Guid ownerId, int page, int pageSize, CancellationToken cancellationToken);
 }

@@ -69,7 +69,7 @@ public class AssistantService(
 
         var ids = matches.Select(match => match.PetAdId).ToList();
 
-        // Only Active ads: this holds even if a vector was never removed. The Owner is never loaded.
+        // Only Active ads: this holds even if a vector was never removed. Only the creator id and display name are read from the owner.
         var rows = await dbContext.PetAds
             .AsNoTracking()
             .Where(petAd => ids.Contains(petAd.Id) && petAd.Status == PetAdStatus.Active)
@@ -85,7 +85,9 @@ public class AssistantService(
                 petAd.Price,
                 petAd.Location,
                 petAd.Status,
-                petAd.CreatedAt
+                petAd.CreatedAt,
+                CreatorId = petAd.OwnerId,
+                CreatorDisplayName = petAd.Owner!.DisplayName
             })
             .ToListAsync(cancellationToken);
 
@@ -98,7 +100,8 @@ public class AssistantService(
             .Take(maxResults)
             .Select(row => new PetAdDetailsResponse(
                 row.Id, row.Title, row.Type, row.Species, row.Breed, row.AgeInMonths, row.Description,
-                row.Price, row.Location, row.Status, DateTime.SpecifyKind(row.CreatedAt, DateTimeKind.Utc)))
+                row.Price, row.Location, row.Status, DateTime.SpecifyKind(row.CreatedAt, DateTimeKind.Utc),
+                new PetAdCreatorResponse(row.CreatorId, row.CreatorDisplayName)))
             .ToList();
     }
 }

@@ -123,7 +123,7 @@ public class GetPetAdTests
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var read = await ReadJsonAsync(response);
-        foreach (var property in read.RootElement.EnumerateObject())
+        foreach (var property in read.RootElement.EnumerateObject().Where(property => property.Name != "creator"))
         {
             var expected = created.RootElement.GetProperty(property.Name);
             if (property.Value.ValueKind == JsonValueKind.Number)
@@ -137,6 +137,8 @@ public class GetPetAdTests
         }
         Assert.True(created.RootElement.TryGetProperty("ownerId", out _));
         Assert.False(read.RootElement.TryGetProperty("ownerId", out _));
+        var creator = read.RootElement.GetProperty("creator");
+        Assert.Equal(created.RootElement.GetProperty("ownerId").GetGuid(), creator.GetProperty("id").GetGuid());
     }
 
     [Fact]
@@ -384,8 +386,52 @@ public class GetPetAdTests
         Assert.DoesNotContain("owner@x.com", text, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("email", text, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("phone", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("userName", text, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("ownerId", text, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain(ownerId.ToString(), text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task GetPetAd_ActiveAd_IncludesCreatorIdAndDisplayName()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var ownerId = await factory.SeedOwnerAsync("owner@x.com", "Anna K");
+        var ad = BuildPetAd(ownerId, Day1);
+        await factory.SeedAdsAsync(ad);
+        var client = await factory.CreateLoggedInClientAsync("viewer@x.com");
+
+        // Act
+        var response = await client.GetPetAdAsync(ad.Id.ToString());
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = await ReadJsonAsync(response);
+        var creator = json.RootElement.GetProperty("creator");
+        Assert.Equal(ownerId, creator.GetProperty("id").GetGuid());
+        Assert.Equal("Anna K", creator.GetProperty("displayName").GetString());
+        Assert.Equal(["displayName", "id"], creator.EnumerateObject().Select(property => property.Name).Order().ToList());
+    }
+
+    [Fact]
+    public async Task GetPetAd_ActiveAd_HasNoEmailPhoneOrUserName()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var ownerId = await factory.SeedOwnerAsync("owner@x.com", "Anna K");
+        var ad = BuildPetAd(ownerId, Day1);
+        await factory.SeedAdsAsync(ad);
+        var client = await factory.CreateLoggedInClientAsync("viewer@x.com");
+
+        // Act
+        var response = await client.GetPetAdAsync(ad.Id.ToString());
+
+        // Assert
+        var text = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("owner@x.com", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("email", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("phone", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("userName", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("normalized", text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -405,7 +451,7 @@ public class GetPetAdTests
         using var json = await ReadJsonAsync(response);
         var names = json.RootElement.EnumerateObject().Select(property => property.Name).Order().ToList();
         Assert.Equal(
-            ["ageInMonths", "breed", "createdAt", "description", "id", "location", "price", "species", "status", "title", "type"],
+            ["ageInMonths", "breed", "createdAt", "creator", "description", "id", "location", "price", "species", "status", "title", "type"],
             names);
     }
 
