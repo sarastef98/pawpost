@@ -18,6 +18,9 @@ const focusableSelector =
 // page behind is inert and does not scroll, focus stays inside the dialog and
 // returns to the opener when the dialog unmounts. A click on the backdrop does
 // nothing, so a touch cannot dismiss it by accident.
+// Only one dialog may be open at a time. A second open dialog would skip the
+// elements the first one already made inert and would restore the wrong
+// overflow value on close. Stacked dialogs would need a shared open counter.
 export default function Dialog({
   title,
   description,
