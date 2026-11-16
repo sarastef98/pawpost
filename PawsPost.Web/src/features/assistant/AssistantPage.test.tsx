@@ -150,12 +150,47 @@ describe('AssistantPage', () => {
 
     expect(screen.getByText('Loading')).toBeInTheDocument()
     const button = screen.getByRole('button', { name: 'Please wait...' })
-    expect(button).toBeDisabled()
+    expect(button).toHaveAttribute('aria-disabled', 'true')
     expect(button).toHaveAttribute('aria-busy', 'true')
     expect(field()).toHaveAttribute('readonly')
     pending.resolve(okResult(assistantBody('Done.', [])))
     expect(await screen.findByText('Done.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Ask' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Ask' })).toHaveAttribute(
+      'aria-disabled',
+      'false',
+    )
+  })
+
+  it('keeps focus on the Ask button while waiting and after the answer arrives', async () => {
+    const pending = deferred<ReturnType<typeof okResult>>()
+    post.mockReturnValue(pending.promise)
+    renderPage()
+    const user = userEvent.setup()
+    await user.type(field(), 'a calm dog')
+    await user.tab()
+
+    await user.keyboard('{Enter}')
+
+    const button = screen.getByRole('button', { name: 'Please wait...' })
+    expect(button).not.toHaveAttribute('disabled')
+    expect(button).toHaveFocus()
+    pending.resolve(okResult(assistantBody('Done.', [])))
+    await screen.findByText('Done.')
+    expect(screen.getByRole('button', { name: 'Ask' })).toHaveFocus()
+  })
+
+  it('sends no second request when the busy button is pressed again', async () => {
+    const pending = deferred<ReturnType<typeof okResult>>()
+    post.mockReturnValue(pending.promise)
+    renderPage()
+    const user = await ask()
+
+    await user.click(screen.getByRole('button', { name: 'Please wait...' }))
+    await user.keyboard('{Enter}')
+    pending.resolve(okResult(assistantBody('Done.', [])))
+
+    await screen.findByText('Done.')
+    expect(post).toHaveBeenCalledTimes(1)
   })
 
   it('sends only one request on a double click', async () => {
