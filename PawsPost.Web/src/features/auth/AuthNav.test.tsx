@@ -32,6 +32,7 @@ function renderHeader(url = '/') {
             <Route path="/pet-ads/new" element={<p>Post page</p>} />
             <Route path="/assistant" element={<p>Assistant page</p>} />
             <Route path="/login" element={<p>Login page</p>} />
+            <Route path="/creators/:id" element={<p>Creator profile page</p>} />
             <Route path="/register" element={<p>Register page</p>} />
           </Route>
         </Routes>
@@ -207,6 +208,8 @@ describe('AuthNav', () => {
     await user.tab()
     expect(screen.getByRole('link', { name: 'Post an ad' })).toHaveFocus()
     await user.tab()
+    expect(screen.getByRole('link', { name: 'My profile' })).toHaveFocus()
+    await user.tab()
 
     expect(screen.getByRole('button', { name: 'Log out' })).toHaveFocus()
   })
@@ -313,5 +316,53 @@ describe('AuthNav assistant link', () => {
     renderHeader()
 
     expect(screen.queryByRole('link', { name: 'Ask the assistant' })).toBeNull()
+  })
+})
+
+describe('AuthNav my profile link', () => {
+  it('links to the own profile when logged in', async () => {
+    get.mockResolvedValue(okResult(testUser))
+
+    renderHeader()
+
+    expect(
+      await screen.findByRole('link', { name: 'My profile' }),
+    ).toHaveAttribute('href', `/creators/${testUser.id}`)
+  })
+
+  it('opens the profile page when clicked', async () => {
+    const user = userEvent.setup()
+    get.mockResolvedValue(okResult(testUser))
+    renderHeader()
+
+    await user.click(await screen.findByRole('link', { name: 'My profile' }))
+
+    expect(screen.getByText('Creator profile page')).toBeInTheDocument()
+  })
+
+  it('sits right before Log out', async () => {
+    get.mockResolvedValue(okResult(testUser))
+    renderHeader()
+    const link = await screen.findByRole('link', { name: 'My profile' })
+    const logout = screen.getByRole('button', { name: 'Log out' })
+
+    expect(link.nextElementSibling).toBe(logout)
+  })
+
+  it('is not shown when logged out', async () => {
+    get.mockResolvedValue(failResult(401))
+
+    renderHeader()
+
+    await screen.findByRole('link', { name: 'Log in' })
+    expect(screen.queryByRole('link', { name: 'My profile' })).toBeNull()
+  })
+
+  it('is not shown while the start check runs', () => {
+    get.mockReturnValue(new Promise(() => {}))
+
+    renderHeader()
+
+    expect(screen.queryByRole('link', { name: 'My profile' })).toBeNull()
   })
 })

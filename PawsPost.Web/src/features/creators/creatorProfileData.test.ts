@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { parseProfilePage, toCreatorProfile } from './creatorProfileData'
+import {
+  parseMyAdsPage,
+  parseProfilePage,
+  toCreatorProfile,
+} from './creatorProfileData'
 
 function body(overrides: Record<string, unknown> = {}) {
   return {
@@ -106,4 +110,33 @@ describe('parseProfilePage', () => {
       expect(parseProfilePage(new URLSearchParams(search))).toBe(1)
     },
   )
+})
+
+describe('parseMyAdsPage', () => {
+  it.each([
+    ['myAdsPage=1', 1],
+    ['myAdsPage=2', 2],
+    ['myAdsPage=15', 15],
+  ])('accepts %s', (search, expected) => {
+    expect(parseMyAdsPage(new URLSearchParams(search))).toBe(expected)
+  })
+
+  it.each([
+    '',
+    'myAdsPage=0',
+    'myAdsPage=-3',
+    'myAdsPage=abc',
+    'myAdsPage=1.5',
+    'myAdsPage=',
+  ])('falls back to page 1 for "%s"', (search) => {
+    expect(parseMyAdsPage(new URLSearchParams(search))).toBe(1)
+  })
+
+  it('ignores the public page key', () => {
+    expect(parseMyAdsPage(new URLSearchParams('page=4'))).toBe(1)
+  })
+
+  it('reads its own key when both keys are present', () => {
+    expect(parseMyAdsPage(new URLSearchParams('page=4&myAdsPage=2'))).toBe(2)
+  })
 })
