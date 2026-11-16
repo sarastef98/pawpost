@@ -1,0 +1,16 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "PawsPost", "--launch-profile", "http"],
+      "port": 5280
+    },
+    {
+      "name": "web-running",
+      "port": 5173,
+      "url": "http://localhost:5173"
+    }
+  ]
+}
