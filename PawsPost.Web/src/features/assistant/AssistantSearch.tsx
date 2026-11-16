@@ -143,7 +143,10 @@ export default function AssistantSearch() {
             errorText={fieldError}
             readOnly={busy}
           />
-          <Button type="submit" disabled={busy} aria-busy={busy}>
+          {/* aria-disabled instead of disabled: a disabled button loses focus,
+              so a keyboard user would lose their place. handleSubmit ignores
+              submits while a request is running. */}
+          <Button type="submit" aria-disabled={busy} aria-busy={busy}>
             {busy ? 'Please wait...' : 'Ask'}
           </Button>
         </form>
