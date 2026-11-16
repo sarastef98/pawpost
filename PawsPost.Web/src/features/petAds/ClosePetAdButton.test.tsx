@@ -22,7 +22,7 @@ const ERROR_TEXT = 'We could not close this ad. Please try again.'
 function renderButton(adTitle?: string) {
   const onClosed = vi.fn()
   const onGone = vi.fn()
-  render(
+  const { unmount } = render(
     <MemoryRouter initialEntries={['/page']}>
       <Routes>
         <Route path="/login" element={<h1>Login probe</h1>} />
@@ -40,7 +40,7 @@ function renderButton(adTitle?: string) {
       </Routes>
     </MemoryRouter>,
   )
-  return { onClosed, onGone, user: userEvent.setup() }
+  return { onClosed, onGone, unmount, user: userEvent.setup() }
 }
 
 // Opens the dialog and presses the confirm button in it.
@@ -152,6 +152,35 @@ describe('ClosePetAdButton', () => {
     await vi.waitFor(() => expect(onClosed).toHaveBeenCalledTimes(1), {
       timeout: 5_000,
     })
+    expect(onGone).not.toHaveBeenCalled()
+  })
+
+  it('calls onClosed only once after 204', async () => {
+    post.mockResolvedValue(noContentResult())
+    const { user, onClosed } = renderButton()
+    await confirmClose(user)
+    await vi.waitFor(() => expect(onClosed).toHaveBeenCalled(), {
+      timeout: 5_000,
+    })
+
+    // Let any later renders and effects run before counting again.
+    await act(async () => {})
+
+    expect(onClosed).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not call onClosed when the page is left while the request runs', async () => {
+    const pending = deferred<ReturnType<typeof noContentResult>>()
+    post.mockReturnValue(pending.promise)
+    const { user, onClosed, onGone, unmount } = renderButton()
+    await confirmClose(user)
+    await screen.findByRole('button', { name: 'Closing...' })
+
+    unmount()
+    await act(async () => pending.resolve(noContentResult()))
+
+    expect(post).toHaveBeenCalledTimes(1)
+    expect(onClosed).not.toHaveBeenCalled()
     expect(onGone).not.toHaveBeenCalled()
   })
 

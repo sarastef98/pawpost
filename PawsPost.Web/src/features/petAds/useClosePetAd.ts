@@ -13,6 +13,10 @@ export type CloseState =
 // Sends the close request for one ad. Only one request runs at a time: the
 // in-flight flag is set synchronously, so a double click sends one request.
 // The response body is never read or shown, only the status code is mapped.
+// If the user leaves the page while the request runs, the result is dropped:
+// the ad may be closed on the server, but the state never becomes 'closed',
+// so onClosed never runs (no message, no reload). This is on purpose: a
+// late answer must not change or navigate a page the user has already left.
 export function useClosePetAd() {
   const [state, setState] = useState<CloseState>('idle')
   const inFlight = useRef(false)
