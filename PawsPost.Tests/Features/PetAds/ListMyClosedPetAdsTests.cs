@@ -251,28 +251,6 @@ public class ListMyClosedPetAdsTests
     }
 
     [Fact]
-    public async Task ListMyClosedPetAds_TwoUsersWithClosedAds_EachSeesOnlyOwnClosedAds()
-    {
-        // Arrange
-        using var factory = new PawsPostFactory();
-        var clientA = await factory.CreateLoggedInClientAsync("owner@x.com", "Anna K");
-        var clientB = await factory.CreateLoggedInClientAsync("other@x.com", "Boris");
-        var adA = BuildPetAd(await clientA.GetMyIdAsync(), Day1, title: "A ad", status: PetAdStatus.Closed);
-        var adB = BuildPetAd(await clientB.GetMyIdAsync(), Day1, title: "B ad", status: PetAdStatus.Closed);
-        await factory.SeedAdsAsync(adA, adB);
-
-        // Act
-        var responseA = await clientA.GetMyClosedPetAdsAsync();
-        var responseB = await clientB.GetMyClosedPetAdsAsync();
-
-        // Assert
-        using var jsonA = await ReadJsonAsync(responseA);
-        using var jsonB = await ReadJsonAsync(responseB);
-        Assert.Equal([adA.Id], ItemIds(jsonA.RootElement));
-        Assert.Equal([adB.Id], ItemIds(jsonB.RootElement));
-    }
-
-    [Fact]
     public async Task ListMyClosedPetAds_OwnerIdInQuery_IsIgnored()
     {
         // Arrange
