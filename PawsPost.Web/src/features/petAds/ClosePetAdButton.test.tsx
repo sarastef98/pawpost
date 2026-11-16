@@ -169,7 +169,7 @@ describe('ClosePetAdButton', () => {
     expect(onClosed).toHaveBeenCalledTimes(1)
   })
 
-  it('does not call onClosed when the page is left while the request runs', async () => {
+  it('calls no callback after unmount when the page is left while the request runs', async () => {
     const pending = deferred<ReturnType<typeof noContentResult>>()
     post.mockReturnValue(pending.promise)
     const { user, onClosed, onGone, unmount } = renderButton()
