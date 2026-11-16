@@ -56,16 +56,15 @@ builder.Services
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IPetAdService, PetAdService>();
-// Only Gemini exists. An unknown provider name stops the app at startup.
-var aiProvider = builder.Configuration[$"{AiOptions.SectionName}:{nameof(AiOptions.Provider)}"] ?? AiOptions.GeminiProvider;
-if (aiProvider == AiOptions.GeminiProvider)
-{
-    builder.Services.AddGeminiProviders(builder.Configuration);
-}
-else
-{
-    throw new InvalidOperationException($"Unknown Ai:Provider \"{aiProvider}\".");
-}
+// Only Gemini exists. Bound and checked at startup, so an unknown provider name stops the app.
+builder.Services
+    .AddOptions<AiOptions>()
+    .Bind(builder.Configuration.GetSection(AiOptions.SectionName))
+    .Validate(
+        options => options.Provider == AiOptions.GeminiProvider,
+        $"Ai:Provider must be \"{AiOptions.GeminiProvider}\".")
+    .ValidateOnStart();
+builder.Services.AddGeminiProviders(builder.Configuration);
 
 builder.Services.AddScoped<IVectorStore, SqliteVectorStore>();
 builder.Services.AddScoped<IPetAdSearchIndexer, PetAdSearchIndexer>();
