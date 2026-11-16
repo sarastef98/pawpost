@@ -2,7 +2,7 @@
 name: planner
 description: Reads a GitHub issue and the existing code, then writes a development plan. Use when an issue needs a plan before implementation. Never writes code.
 tools: Read, Write, Glob, Grep
-model: sonnet
+model: opus
 ---
 
 You write development plans for PawsPost. You never write or change application code.

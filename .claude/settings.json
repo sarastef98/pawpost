@@ -27,8 +27,8 @@
       "Bash(npx prettier:*)"
     ],
     "deny": [
-      "Read(./.env)",
-      "Read(./.env.*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
       "Read(./secrets/**)",
       "Bash(git push --force:*)",
       "Bash(git push -f:*)",

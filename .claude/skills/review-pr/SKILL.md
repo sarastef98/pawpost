@@ -15,10 +15,13 @@ If the arguments contain `--ask`, ignore that word when looking for a PR number,
 
 1. Run `git branch --show-current`. If it is `main`, stop and tell the user to switch to the feature branch.
 2. Take the issue number from the branch name `feature/<number>-<slug>`. Find the issue file in `docs/issues/` and the plan in `docs/plans/<number>-*.md`. If either is missing, stop and say so.
+   Read the `Layer:` line of the plan. If it is missing, treat the plan as `backend` and tell the user. The layer decides which checks apply everywhere below, called "the layer checks":
+   - backend: `dotnet build`, `dotnet test`, `dotnet format --verify-no-changes`.
+   - frontend: inside `PawsPost.Web`: `npm run lint`, `npm run build` (it also type-checks), `npm test`, `npm run format:check`.
 3. Check whether a pull request already exists for this branch (GitHub tools, repository from `git remote get-url origin`). If a PR number was given, use that PR.
 4. If no PR exists:
-   a. Run `dotnet build`, `dotnet test` and `dotnet format --verify-no-changes`. If any of them fails, stop and show the user the failure. Do not open a PR.
-   b. Show the user the commits (`git log main..HEAD --oneline`), the changed files, and the three results.
+   a. Run the layer checks. If any of them fails, stop and show the user the failure. Do not open a PR.
+   b. Show the user the commits (`git log main..HEAD --oneline`), the changed files, and the results of the layer checks.
    c. Push the branch with `git push -u origin <branch>` and create the PR against `main`. The title is the issue title. The body follows `templates/pull-request.md`, includes `Closes #<number>`, and ticks a checklist box only if it is true according to the real results from step a.
 5. Use the `pr-reviewer` agent with the issue file, the plan file and the branch name.
 6. Use the `code-reviewer` agent with the branch name. Run both reviews at the same time if you can.
@@ -26,9 +29,9 @@ If the arguments contain `--ask`, ignore that word when looking for a PR number,
 8. Post the merged review as a comment on the PR with the GitHub tools.
 9. If there are Blocking or Should fix items:
    a. If two fix rounds have already been done, stop. Tell the user the remaining work needs a person.
-   b. Use the `review-fixer` agent with the review file path. Suggestions are not fixed unless the user asks.
+   b. Use the `review-fixer` agent with the review file path and the plan path, so it knows the layer. Suggestions are not fixed unless the user asks.
    c. Show the user the fixer's reply and the new commits.
-   d. If the fixer reported any finding as `not fixed` or `disagree`, or `dotnet test` fails, or a finding needs a client decision, stop and report to the user. Otherwise run `git push` and go back to step 5 for the next round.
+   d. If the fixer reported any finding as `not fixed` or `disagree`, or the test command of the layer (`dotnet test` or `npm test`) fails, or a finding needs a client decision, stop and report to the user. Otherwise run `git push` and go back to step 5 for the next round.
 10. If there are no Blocking items left, tell the user the PR is ready for them to review and merge.
 
 ## Rules

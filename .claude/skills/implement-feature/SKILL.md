@@ -19,12 +19,12 @@ The plan is: $ARGUMENTS
 6. Create the branch from `main` with `git switch main` then `git switch -c <branch>`. If the branch already exists, stop and ask.
 7. Commit the issue and plan files first: `docs: add issue and plan (#<number>)`.
 8. Use the `developer` agent (backend plans) or the `frontend-developer` agent (frontend plans, see the `Layer:` line of the plan) with the plan path. If it reports that it is blocked, show the user the reason and stop.
-9. Use the `test-writer` agent (backend plans) or the `frontend-test-writer` agent (frontend plans) with the plan path. If it reports a bug, show the user the failing test and the reason, then ask: fix it now on this branch (send it to the `developer` agent with the failing test, then run the `test-writer` again), or open a bug issue on GitHub (follow `templates/bug.md`, use the GitHub tools, label `bug`, and only after a clear yes). Never fix the code yourself.
-10. Show the user: the commits (`git log main..HEAD --oneline`), the changed files (`git diff main --stat`), the `dotnet test` result, and anything skipped or blocked.
+9. Use the `test-writer` agent (backend plans) or the `frontend-test-writer` agent (frontend plans) with the plan path. If it reports a bug, show the user the failing test and the reason, then ask: fix it now on this branch (send it to the `developer` or `frontend-developer` agent of the plan's layer with the failing test, then run the matching test-writer again), or open a bug issue on GitHub (follow `templates/bug.md`, use the GitHub tools, label `bug`, and only after a clear yes). Never fix the code yourself.
+10. Show the user: the commits (`git log main..HEAD --oneline`), the changed files (`git diff main --stat`), the result of the layer's test command (`dotnet test` for backend plans, `npm test` inside `PawsPost.Web` for frontend plans, run it yourself if the agent did not report it), and anything skipped or blocked.
 11. Tell the user to review the changes, and that the pull request and the reviews come next. Do not push.
 
 ## Rules
 
 - Never implement a plan that is not Approved.
 - Never push and never open a PR in this workflow.
-- Do not write code or tests yourself. Code comes from the `developer` agent and tests from the `test-writer` agent.
+- Do not write code or tests yourself. Code comes from the `developer` or `frontend-developer` agent and tests from the `test-writer` or `frontend-test-writer` agent.

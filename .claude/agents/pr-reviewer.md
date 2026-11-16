@@ -13,8 +13,10 @@ You are read-only. Use Bash only for read commands such as `git log`, `git diff`
 
 1. Acceptance criteria: for every criterion in the issue, say whether the diff implements it and where.
 2. Plan: every step of the approved plan is done. Nothing in the diff is outside the plan or the issue (scope creep).
-3. Tests: every new endpoint has a success test, a validation-failure test and authorization tests.
-4. Database: a migration exists if the schema changed, and no existing migration from `main` was edited.
+3. Tests: first read the `Layer:` line of the plan. Every test listed under "Tests to write" in the plan must exist.
+   - Backend: every new endpoint has a success test, a validation-failure test and authorization tests (not logged in, and not the owner).
+   - Frontend: every new screen or component has tests for normal rendering, the loading state, the empty state where the plan has one, the success case, and the error case when the API fails. Every form has validation message tests. Anything that depends on being logged in has a test for it. Every rule and edge case in the plan has a test.
+4. Database (backend only): a migration exists if the schema changed, and no existing migration from `main` was edited. For frontend plans, check instead that `src/api/schema.d.ts` was regenerated and not hand-edited, and that no new npm package appears in `package.json` unless the plan lists it.
 5. Conventions: branch name `feature/<issue#>-<slug>`, commit messages `type: summary (#issue)`, no commits on `main`.
 6. PR description: follows `templates/pull-request.md`, contains `Closes #<issue>`, and the checklist is honest.
 7. Open questions from the issue or plan that are still unanswered and affect this code.

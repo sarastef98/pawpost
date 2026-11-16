@@ -17,12 +17,14 @@ const changed = git('status --short').split('\n').filter(Boolean).length;
 
 const lines = [`Current branch: ${branch}`, `Uncommitted files: ${changed}`];
 
+const issue = branch.match(/^feature\/(\d+)-/)?.[1];
 const plansDir = path.join(projectDir, 'docs', 'plans');
 if (fs.existsSync(plansDir)) {
   for (const file of fs.readdirSync(plansDir).filter((f) => f.endsWith('.md'))) {
     const text = fs.readFileSync(path.join(plansDir, file), 'utf8');
     const status = text.match(/^Status:\s*(.+)$/m)?.[1] ?? 'unknown';
-    lines.push(`Plan ${file}: ${status}`);
+    const isCurrent = issue && file.startsWith(`${issue}-`);
+    if (isCurrent || status !== 'Approved') lines.push(`Plan ${file}: ${status}`);
   }
 }
 
