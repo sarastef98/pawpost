@@ -148,3 +148,44 @@ describe('toListData', () => {
     expect(toListData('x')).toBeNull()
   })
 })
+
+describe('toListData creator', () => {
+  const item = { id: 'a1', title: 'Rex', type: 'Adoption', price: null }
+
+  function convert(creator: unknown) {
+    return toListData({
+      items: [{ ...item, creator }],
+      totalCount: 1,
+      page: 1,
+      pageSize: 20,
+    })
+  }
+
+  it('reads the creator of an item', () => {
+    const data = convert({ id: 'c1', displayName: 'Anna' })
+
+    expect(data?.items[0].creator).toEqual({ id: 'c1', displayName: 'Anna' })
+  })
+
+  it('keeps an item with a missing creator and gives it a null creator', () => {
+    const data = toListData({
+      items: [item],
+      totalCount: 1,
+      page: 1,
+      pageSize: 20,
+    })
+
+    expect(data?.items).toHaveLength(1)
+    expect(data?.items[0].creator).toBeNull()
+  })
+
+  it.each([null, 'Anna', 5, { id: '', displayName: 'Anna' }, { id: 'c1' }])(
+    'keeps an item whose creator is unreadable (%j)',
+    (creator) => {
+      const data = convert(creator)
+
+      expect(data?.items[0].id).toBe('a1')
+      expect(data?.items[0].creator).toBeNull()
+    },
+  )
+})
