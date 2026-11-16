@@ -36,7 +36,8 @@ internal static class GeminiHttp
                 ?? throw new AiProviderException("The AI provider returned an empty response.");
         }
         catch (Exception exception) when (
-            exception is HttpRequestException or JsonException
+            // NotSupportedException: the response content type is not JSON (for example an HTML error page).
+            exception is HttpRequestException or JsonException or NotSupportedException
             || (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested))
         {
             // The inner message is not used: it can hold the request URL.
