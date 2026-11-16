@@ -105,6 +105,12 @@ builder.Services
 
 var app = builder.Build();
 
+// One-off maintenance mode: run the re-embedding step, print the result and exit without starting the server.
+if (args.Contains(PetAdReindexCommand.Name))
+{
+    return await PetAdReindexCommand.RunAsync(app.Services, Console.Out, CancellationToken.None);
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -126,6 +132,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+return 0;
 
 static async Task WriteProblemAsync(HttpContext httpContext, int statusCode, string title)
 {
