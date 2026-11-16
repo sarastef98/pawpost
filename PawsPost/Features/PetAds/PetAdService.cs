@@ -241,6 +241,8 @@ public class PetAdService(
     // touches the vector store. Only the ad id and the exception type are logged, never the exception message.
     // CancellationToken.None on purpose: once the close is committed, a client that disconnects must not stop
     // the cleanup, and a cancelled request must not be logged as an index failure.
+    // This is safe because the vector store is local SQLite, so the removal is fast. If the store becomes remote,
+    // consider a timeout or a linked token with a timeout so the removal cannot hang.
     private async Task TryRemoveFromIndexAsync(Guid petAdId)
     {
         try
