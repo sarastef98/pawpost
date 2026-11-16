@@ -132,8 +132,10 @@ public class OpenApiDocumentTests(PawsPostFactory factory) : IClassFixture<PawsP
 
         // Assert
         var names = schema.GetProperty("properties").EnumerateObject().Select(p => p.Name).Order().ToList();
-        Assert.Equal(["createdAt", "id", "location", "price", "species", "title", "type"], names);
+        Assert.Equal(["createdAt", "creator", "id", "location", "price", "species", "title", "type"], names);
         Assert.DoesNotContain("ownerId", names);
+        Assert.DoesNotContain("email", names);
+        Assert.DoesNotContain("userName", names);
     }
 
     [Fact]
@@ -182,9 +184,11 @@ public class OpenApiDocumentTests(PawsPostFactory factory) : IClassFixture<PawsP
         // Assert
         var names = schema.GetProperty("properties").EnumerateObject().Select(p => p.Name).Order().ToList();
         Assert.Equal(
-            ["ageInMonths", "breed", "createdAt", "description", "id", "location", "price", "species", "status", "title", "type"],
+            ["ageInMonths", "breed", "createdAt", "creator", "description", "id", "location", "price", "species", "status", "title", "type"],
             names);
         Assert.DoesNotContain("ownerId", names);
+        Assert.DoesNotContain("email", names);
+        Assert.DoesNotContain("userName", names);
         var required = GetRequiredNames(schema);
         foreach (var name in new[] { "id", "title", "type", "species", "ageInMonths", "description", "status", "createdAt" })
         {
