@@ -45,10 +45,11 @@ public static class PetAdTestHelpers
     }
 
     /// <summary>Registers the user, logs in and returns the logged-in client (own cookie jar).</summary>
-    public static async Task<HttpClient> CreateLoggedInClientAsync(this WebApplicationFactory<Program> factory, string email)
+    public static async Task<HttpClient> CreateLoggedInClientAsync(
+        this WebApplicationFactory<Program> factory, string email, string? displayName = null)
     {
         var client = factory.CreateApiClient();
-        await client.RegisterAsync(email);
+        await client.RegisterAsync(email, displayName: displayName);
         var login = await client.LoginAsync(email);
         login.EnsureSuccessStatusCode();
         return client;
@@ -112,10 +113,11 @@ public static class PetAdTestHelpers
     }
 
     /// <summary>Registers a user through the API and returns its id (the ads table needs a real owner).</summary>
-    public static async Task<Guid> SeedOwnerAsync(this WebApplicationFactory<Program> factory, string email)
+    public static async Task<Guid> SeedOwnerAsync(
+        this WebApplicationFactory<Program> factory, string email, string? displayName = null)
     {
         using var client = factory.CreateApiClient();
-        await client.RegisterAsync(email);
+        await client.RegisterAsync(email, displayName: displayName);
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var user = await db.Users.AsNoTracking().SingleAsync(user => user.Email == email);

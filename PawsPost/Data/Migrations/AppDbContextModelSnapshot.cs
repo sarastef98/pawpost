@@ -145,6 +145,8 @@ namespace PawsPost.Data.Migrations
 
                     b.HasIndex("Status", "CreatedAt");
 
+                    b.HasIndex("OwnerId", "Status", "CreatedAt");
+
                     b.ToTable("PetAds");
                 });
 
@@ -186,6 +188,11 @@ namespace PawsPost.Data.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
@@ -197,6 +204,11 @@ namespace PawsPost.Data.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NormalizedDisplayName")
+                        .IsRequired()
+                        .HasMaxLength(30)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("NormalizedEmail")
@@ -227,6 +239,9 @@ namespace PawsPost.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("NormalizedDisplayName")
+                        .IsUnique();
 
                     b.HasIndex("NormalizedEmail")
                         .IsUnique()

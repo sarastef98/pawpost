@@ -50,11 +50,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityUser
             ad.HasIndex(petAd => petAd.CreatedAt);
             ad.HasIndex(petAd => petAd.OwnerId);
             ad.HasIndex(petAd => new { petAd.Status, petAd.CreatedAt });
+            ad.HasIndex(petAd => new { petAd.OwnerId, petAd.Status, petAd.CreatedAt });
         });
 
         // Identity's default email index is not unique. The database must also guarantee unique emails.
         builder.Entity<User>()
             .HasIndex(user => user.NormalizedEmail)
             .IsUnique();
+
+        // Display names are unique ignoring case. The unique index on the normalized copy makes the database
+        // enforce it for every letter (SQLite NOCASE would only fold A to Z), so parallel requests cannot both win.
+        builder.Entity<User>(user =>
+        {
+            user.Property(item => item.DisplayName).HasMaxLength(30).IsRequired();
+            user.Property(item => item.NormalizedDisplayName).HasMaxLength(30).IsRequired();
+            user.HasIndex(item => item.NormalizedDisplayName).IsUnique();
+        });
     }
 }

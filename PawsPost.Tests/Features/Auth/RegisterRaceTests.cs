@@ -65,7 +65,9 @@ public class RegisterRaceTests
             NormalizedUserName = Email.ToUpperInvariant(),
             Email = Email,
             NormalizedEmail = Email.ToUpperInvariant(),
-            SecurityStamp = Guid.NewGuid().ToString()
+            SecurityStamp = Guid.NewGuid().ToString(),
+            DisplayName = "Competitor",
+            NormalizedDisplayName = "COMPETITOR"
         });
         await otherRequestDb.SaveChangesAsync(cancellationToken);
     }
