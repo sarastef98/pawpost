@@ -11,6 +11,7 @@ function renderCard(overrides: Partial<PetAdSummary> = {}) {
     type: 'Adoption',
     price: null,
     location: 'Skopje',
+    creator: null,
     ...overrides,
   }
   render(

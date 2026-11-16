@@ -41,7 +41,37 @@ export function sampleAd(overrides: Record<string, unknown> = {}) {
     location: 'Skopje',
     status: 'Active',
     createdAt: '2026-11-01T10:00:00Z',
+    creator: { id: 'creator-1', displayName: 'Pet lover 0001' },
     ...overrides,
+  }
+}
+
+// A synthetic list item as the API sends it (PetAdListItemResponse).
+export function sampleListItem(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'ad-1',
+    title: 'Friendly Rex',
+    type: 'Adoption',
+    price: null,
+    location: 'Skopje',
+    createdAt: '2026-11-01T10:00:00Z',
+    creator: { id: 'creator-1', displayName: 'Pet lover 0001' },
+    ...overrides,
+  }
+}
+
+// A 200 body of the public creator profile (CreatorProfileResponse).
+export function creatorProfileBody(
+  displayName: string,
+  items: unknown[] = [],
+  totalCount = items.length,
+  page = 1,
+  pageSize = 20,
+) {
+  return {
+    id: 'creator-1',
+    displayName,
+    ads: { items, totalCount, page, pageSize },
   }
 }
 

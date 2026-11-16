@@ -14,6 +14,7 @@ function ad(overrides: Partial<Ad> = {}): Ad {
     description: 'A calm dog.',
     price: 150.5,
     location: 'Skopje',
+    creator: null,
     ...overrides,
   }
 }

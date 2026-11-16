@@ -100,7 +100,7 @@ describe('toListData', () => {
     })
 
     expect(data).toEqual({
-      items: [{ ...item, price: 1200 }],
+      items: [{ ...item, price: 1200, creator: null }],
       totalCount: 57,
       page: 2,
       pageSize: 20,

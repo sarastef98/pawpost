@@ -30,6 +30,7 @@ describe('toPetAdDetails', () => {
       description: 'A calm dog.',
       price: 150.5,
       location: 'Skopje',
+      creator: null,
     })
   })
 
