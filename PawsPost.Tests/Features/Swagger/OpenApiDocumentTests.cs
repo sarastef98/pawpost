@@ -192,6 +192,47 @@ public class OpenApiDocumentTests(PawsPostFactory factory) : IClassFixture<PawsP
         }
     }
 
+    [Fact]
+    public async Task GetOpenApiDocument_AssistantSearch_HasRequestAndResponseSchemas()
+    {
+        // Arrange
+        using var document = await GetOpenApiDocumentAsync();
+
+        // Act
+        var post = GetAssistantSearchPost(document);
+        var requestSchema = post.GetProperty("requestBody").GetProperty("content").GetProperty("application/json").GetProperty("schema");
+        var responses = post.GetProperty("responses");
+        var ok = responses.GetProperty("200").GetProperty("content").GetProperty("application/json").GetProperty("schema");
+
+        // Assert
+        Assert.Equal("#/components/schemas/AssistantSearchRequest", requestSchema.GetProperty("$ref").GetString());
+        Assert.Equal("#/components/schemas/AssistantSearchResponse", ok.GetProperty("$ref").GetString());
+        Assert.True(responses.TryGetProperty("400", out _));
+        Assert.True(responses.TryGetProperty("401", out _));
+        Assert.True(responses.TryGetProperty("503", out _));
+        Assert.Contains("question", GetSchema(document, "AssistantSearchRequest").GetProperty("properties").EnumerateObject().Select(p => p.Name));
+    }
+
+    [Fact]
+    public async Task GetOpenApiDocument_AssistantSearchResponse_AdsUsePetAdDetailsResponse()
+    {
+        // Arrange
+        using var document = await GetOpenApiDocumentAsync();
+
+        // Act
+        var schema = GetSchema(document, "AssistantSearchResponse");
+        var ads = schema.GetProperty("properties").GetProperty("ads");
+
+        // Assert
+        Assert.Equal("array", ads.GetProperty("type").GetString());
+        Assert.Equal("#/components/schemas/PetAdDetailsResponse", ads.GetProperty("items").GetProperty("$ref").GetString());
+        Assert.Contains("answer", GetRequiredNames(schema));
+        Assert.Contains("ads", GetRequiredNames(schema));
+    }
+
+    private static JsonElement GetAssistantSearchPost(JsonDocument document) =>
+        document.RootElement.GetProperty("paths").GetProperty("/api/assistant/search").GetProperty("post");
+
     private static readonly string[] AllowedSpecies = ["Dog", "Cat", "Bird", "Rabbit", "Other"];
 
     [Fact]
