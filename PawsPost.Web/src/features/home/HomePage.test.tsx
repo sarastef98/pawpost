@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import HomePage from './HomePage'
@@ -38,5 +38,37 @@ describe('HomePage', () => {
     expect(
       screen.getByText('Find a new friend or help a pet find a loving home.'),
     ).toBeInTheDocument()
+  })
+})
+
+describe('HomePage notice', () => {
+  function renderHomeWithState(state?: unknown) {
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/', state }]}>
+        <HomePage />
+      </MemoryRouter>,
+    )
+  }
+
+  it('shows the closed notice when opened after closing an ad', async () => {
+    renderHomeWithState({ notice: 'Your ad was closed.' })
+
+    expect(await screen.findByText('Your ad was closed.')).toBeInTheDocument()
+    expect(screen.getByText('Your ad was closed.')).toHaveAttribute(
+      'role',
+      'status',
+    )
+  })
+
+  it('shows no notice text when opened directly', async () => {
+    renderHomeWithState()
+
+    // The notice fills its text on the next tick, so let that tick pass first.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
+    expect(screen.queryByText('Your ad was closed.')).toBeNull()
   })
 })

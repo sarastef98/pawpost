@@ -1,13 +1,29 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import {
+  configure,
+  getConfig,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest'
 import type { Mock } from 'vitest'
 import { client } from '../../api/client'
 import Tabs from '../../components/Tabs'
 import {
   deferred,
   failResult,
+  noContentResult,
   okResult,
   sampleListItem,
 } from '../../test/apiResponses'
@@ -122,12 +138,12 @@ describe('MyAdsTab', () => {
     get.mockReturnValue(pending.promise)
     renderTab()
 
-    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.getByText('Loading')).toBeInTheDocument()
     expect(screen.queryByText('Ad 1')).toBeNull()
 
     pending.resolve(okResult(listBody(1)))
     expect(await screen.findByText('Ad 1')).toBeInTheDocument()
-    expect(screen.queryByRole('status')).toBeNull()
+    expect(screen.queryByText('Loading')).toBeNull()
   })
 
   it('shows the empty message with a Post an ad link and no pager when there are no ads', async () => {
@@ -297,5 +313,191 @@ describe('MyAdsTab', () => {
 
     await screen.findByText('Ad 21')
     await waitFor(() => expect(screen.getByRole('tabpanel')).toHaveFocus())
+  })
+})
+
+// These tests click through the dialog and wait for a reload, many awaited
+// steps with real timers. Under load (the full suite in parallel) they can pass
+// the default limits, so the test and the find/waitFor timeouts are larger.
+describe('MyAdsTab close ad', { timeout: 15_000 }, () => {
+  const post = client.POST as unknown as Mock
+  const CLOSED_TEXT = 'Your ad was closed.'
+  const defaultAsyncTimeout = getConfig().asyncUtilTimeout
+
+  beforeAll(() => {
+    configure({ asyncUtilTimeout: 5_000 })
+  })
+
+  afterAll(() => {
+    configure({ asyncUtilTimeout: defaultAsyncTimeout })
+  })
+
+  beforeEach(() => {
+    get.mockReset()
+    post.mockReset()
+  })
+
+  async function closeAd(
+    user: ReturnType<typeof userEvent.setup>,
+    title: string,
+  ) {
+    await user.click(
+      await screen.findByRole('button', { name: `Close ad: ${title}` }),
+    )
+    const dialog = await screen.findByRole('dialog')
+    await user.click(within(dialog).getByRole('button', { name: 'Close ad' }))
+  }
+
+  it('shows a Close ad button for each ad, named with its title', async () => {
+    get.mockResolvedValue(okResult(listBody(2)))
+    renderTab()
+
+    expect(
+      await screen.findByRole('button', { name: 'Close ad: Ad 1' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Close ad: Ad 2' }),
+    ).toBeInTheDocument()
+  })
+
+  it('sends no close request and keeps the list when the dialog is cancelled', async () => {
+    const user = userEvent.setup()
+    get.mockResolvedValue(okResult(listBody(2)))
+    renderTab()
+    await user.click(
+      await screen.findByRole('button', { name: 'Close ad: Ad 1' }),
+    )
+
+    await user.click(await screen.findByRole('button', { name: 'Cancel' }))
+
+    expect(post).not.toHaveBeenCalled()
+    expect(get).toHaveBeenCalledTimes(1)
+    expect(screen.getByText('Ad 1')).toBeInTheDocument()
+    expect(screen.getByText('Ad 2')).toBeInTheDocument()
+  })
+
+  it('shows the closed message and requests the list again after a successful close', async () => {
+    const user = userEvent.setup()
+    get.mockResolvedValue(okResult(listBody(2)))
+    post.mockResolvedValue(noContentResult())
+    renderTab()
+
+    await closeAd(user, 'Ad 1')
+
+    expect(await screen.findByText(CLOSED_TEXT)).toHaveAttribute(
+      'role',
+      'status',
+    )
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(2))
+    expect(post).toHaveBeenCalledWith('/api/pet-ads/{id}/close', {
+      params: { path: { id: 'ad-1' } },
+    })
+  })
+
+  it('no longer shows the closed ad after the list reloads', async () => {
+    const user = userEvent.setup()
+    get.mockResolvedValueOnce(okResult(listBody(2)))
+    get.mockResolvedValueOnce(okResult(listBody(1, 2)))
+    post.mockResolvedValue(noContentResult())
+    renderTab()
+
+    await closeAd(user, 'Ad 1')
+
+    // Ad 1 is also gone while the spinner shows during the reload, so wait
+    // until the reloaded list is there with Ad 2 and without Ad 1.
+    await waitFor(() => {
+      expect(screen.getByText('Ad 2')).toBeInTheDocument()
+      expect(screen.queryByText('Ad 1')).toBeNull()
+    })
+  })
+
+  it('shows the empty state together with the message after closing the only ad', async () => {
+    const user = userEvent.setup()
+    get.mockResolvedValueOnce(okResult(listBody(1)))
+    get.mockResolvedValueOnce(okResult(listBody(0)))
+    post.mockResolvedValue(noContentResult())
+    renderTab()
+
+    await closeAd(user, 'Ad 1')
+
+    expect(await screen.findByText(EMPTY_TEXT)).toBeInTheDocument()
+    expect(screen.getByText(CLOSED_TEXT)).toBeInTheDocument()
+  })
+
+  it('moves to page 1 when the last ad on page 2 is closed', async () => {
+    const user = userEvent.setup()
+    get.mockResolvedValueOnce(okResult(listBody(1, 21, 21, 2)))
+    get.mockResolvedValueOnce(okResult(listBody(0, 1, 20, 2)))
+    get.mockResolvedValueOnce(okResult(listBody(20, 1, 20, 1)))
+    post.mockResolvedValue(noContentResult())
+    renderTab('/creators/user-1?myAdsPage=2')
+
+    await closeAd(user, 'Ad 21')
+
+    expect(await screen.findByText('Ad 1')).toBeInTheDocument()
+    expect(screen.getByText('URL: /creators/user-1')).toBeInTheDocument()
+    expect(lastCall()[1].params.query).toEqual({ page: 1, pageSize: 20 })
+    expect(screen.getByText(CLOSED_TEXT)).toBeInTheDocument()
+  })
+
+  it('moves focus to the tab panel after the list reloads', async () => {
+    const user = userEvent.setup()
+    get.mockResolvedValueOnce(okResult(listBody(2)))
+    get.mockResolvedValueOnce(okResult(listBody(1, 2)))
+    post.mockResolvedValue(noContentResult())
+    renderTab()
+
+    await closeAd(user, 'Ad 1')
+
+    await waitFor(() => expect(screen.getByRole('tabpanel')).toHaveFocus())
+  })
+
+  it('shows the message on 404 and reloads the list after OK', async () => {
+    const user = userEvent.setup()
+    get.mockResolvedValueOnce(okResult(listBody(2)))
+    get.mockResolvedValueOnce(okResult(listBody(1, 2)))
+    post.mockResolvedValue(failResult(404))
+    renderTab()
+
+    await closeAd(user, 'Ad 1')
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'This ad is already closed or no longer exists.',
+    )
+    expect(get).toHaveBeenCalledTimes(1)
+    await user.click(screen.getByRole('button', { name: 'OK' }))
+
+    await waitFor(() => expect(screen.queryByText('Ad 1')).toBeNull())
+    expect(get).toHaveBeenCalledTimes(2)
+    expect(screen.queryByText(CLOSED_TEXT)).toBeNull()
+  })
+
+  it('opens the login page when the close answers 401', async () => {
+    const user = userEvent.setup()
+    get.mockResolvedValue(okResult(listBody(1)))
+    post.mockResolvedValue(failResult(401))
+    renderTab()
+
+    await closeAd(user, 'Ad 1')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Login probe' }),
+    ).toBeInTheDocument()
+  })
+
+  it('clears the closed message when the page changes', async () => {
+    const user = userEvent.setup()
+    get.mockResolvedValueOnce(okResult(listBody(20, 1, 45, 1)))
+    get.mockResolvedValueOnce(okResult(listBody(20, 2, 44, 1)))
+    get.mockResolvedValueOnce(okResult(listBody(20, 21, 44, 2)))
+    post.mockResolvedValue(noContentResult())
+    renderTab()
+    await closeAd(user, 'Ad 1')
+    expect(await screen.findByText(CLOSED_TEXT)).toBeInTheDocument()
+    await screen.findByText('Ad 2')
+
+    await user.click(screen.getByRole('button', { name: 'Next' }))
+
+    expect(await screen.findByText('Ad 21')).toBeInTheDocument()
+    expect(screen.queryByText(CLOSED_TEXT)).toBeNull()
   })
 })

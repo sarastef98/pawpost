@@ -1,3 +1,4 @@
+import Notice from '../../components/Notice'
 import PetAdList from '../petAds/PetAdList'
 
 export default function HomePage() {
@@ -9,6 +10,7 @@ export default function HomePage() {
           Find a new friend or help a pet find a loving home.
         </p>
       </div>
+      <Notice />
       <PetAdList />
     </div>
   )
