@@ -1,10 +1,11 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import Button from '../../components/Button'
 import EmptyState from '../../components/EmptyState'
 import ErrorMessage from '../../components/ErrorMessage'
 import Spinner from '../../components/Spinner'
 import PetAdCard from '../petAds/PetAdCard'
+import ClosePetAdButton from '../petAds/ClosePetAdButton'
 import { totalPages } from '../petAds/petAdListQuery'
 import { useMyPetAds } from '../petAds/useMyPetAds'
 import { parseMyAdsPage } from './creatorProfileData'
@@ -17,6 +18,7 @@ export default function MyAdsTab() {
   const { state, retry } = useMyPetAds(page, true)
   const panelRef = useRef<HTMLElement | null>(null)
   const pendingFocus = useRef(false)
+  const [message, setMessage] = useState('')
 
   // A page beyond the last: go to the last page (or remove the key when there
   // are no ads). Replace the URL so Back does not loop.
@@ -68,8 +70,20 @@ export default function MyAdsTab() {
   }, [state, outOfRange])
 
   function goToPage(next: number) {
+    setMessage('')
     pendingFocus.current = true
     updatePage(next, false)
+  }
+
+  function handleClosed() {
+    setMessage('Your ad was closed.')
+    pendingFocus.current = true
+    retry()
+  }
+
+  function reloadList() {
+    pendingFocus.current = true
+    retry()
   }
 
   function retryLoad() {
@@ -83,6 +97,12 @@ export default function MyAdsTab() {
 
   return (
     <section ref={panelRef} className="flex flex-col gap-4">
+      <p
+        role="status"
+        className={message ? 'text-base text-success' : 'sr-only'}
+      >
+        {message}
+      </p>
       {state.status === 'loading' || outOfRange ? (
         <Spinner />
       ) : state.status === 'error' ? (
@@ -105,6 +125,13 @@ export default function MyAdsTab() {
             {state.data.items.map((ad) => (
               <li key={ad.id} className="flex flex-col gap-2">
                 <PetAdCard ad={ad} />
+                <ClosePetAdButton
+                  adId={ad.id}
+                  adTitle={ad.title}
+                  className="w-full self-start sm:w-auto"
+                  onClosed={handleClosed}
+                  onGone={reloadList}
+                />
               </li>
             ))}
           </ul>

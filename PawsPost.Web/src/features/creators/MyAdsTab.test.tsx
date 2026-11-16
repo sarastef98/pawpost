@@ -122,12 +122,12 @@ describe('MyAdsTab', () => {
     get.mockReturnValue(pending.promise)
     renderTab()
 
-    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.getByText('Loading')).toBeInTheDocument()
     expect(screen.queryByText('Ad 1')).toBeNull()
 
     pending.resolve(okResult(listBody(1)))
     expect(await screen.findByText('Ad 1')).toBeInTheDocument()
-    expect(screen.queryByRole('status')).toBeNull()
+    expect(screen.queryByText('Loading')).toBeNull()
   })
 
   it('shows the empty message with a Post an ad link and no pager when there are no ads', async () => {
