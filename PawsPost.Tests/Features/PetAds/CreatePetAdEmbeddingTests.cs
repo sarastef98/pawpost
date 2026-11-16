@@ -120,6 +120,7 @@ public class CreatePetAdEmbeddingTests
 
         // Assert
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Single(await factory.GetStoredAdsAsync());
     }
 
     [Fact]
