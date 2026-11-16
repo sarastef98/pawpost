@@ -145,8 +145,8 @@ public class PetAdService(
         catch (AiProviderException exception)
         {
             logger.LogWarning(
-                "Could not embed pet ad {PetAdId} ({ExceptionType}). It is not searchable yet.",
-                ad.Id, exception.GetType().Name);
+                "Could not embed pet ad {PetAdId} ({ExceptionType}): {Reason} It is not searchable yet.",
+                ad.Id, exception.GetType().Name, exception.Message);
         }
     }
 

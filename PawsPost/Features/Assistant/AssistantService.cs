@@ -50,9 +50,11 @@ public class AssistantService(
         }
         catch (AiProviderException exception)
         {
-            // Only the exception type is logged. Never the question, ad text or provider details.
+            // Only the exception type and its neutral message are logged (for example "answered with status 404").
+            // Never the question, ad text, URL or response body: GeminiHttp keeps those out of the message.
             logger.LogWarning(
-                "The AI provider failed during an assistant search ({ExceptionType}).", exception.GetType().Name);
+                "The AI provider failed during an assistant search ({ExceptionType}): {Reason}",
+                exception.GetType().Name, exception.Message);
             return AssistantSearchResult.Unavailable();
         }
     }
