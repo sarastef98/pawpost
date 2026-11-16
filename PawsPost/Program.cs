@@ -5,6 +5,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using PawsPost.Common;
 using PawsPost.Data;
+using PawsPost.Features.Ai;
+using PawsPost.Features.Ai.Gemini;
+using PawsPost.Features.Ai.VectorStores;
+using PawsPost.Features.Assistant;
 using PawsPost.Features.Auth;
 using PawsPost.Features.PetAds;
 
@@ -52,6 +56,30 @@ builder.Services
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IPetAdService, PetAdService>();
+// Only Gemini exists. Bound and checked at startup, so an unknown provider name stops the app.
+builder.Services
+    .AddOptions<AiOptions>()
+    .Bind(builder.Configuration.GetSection(AiOptions.SectionName))
+    .Validate(
+        options => options.Provider == AiOptions.GeminiProvider,
+        $"Ai:Provider must be \"{AiOptions.GeminiProvider}\".")
+    .ValidateOnStart();
+builder.Services.AddGeminiProviders(builder.Configuration);
+
+builder.Services.AddScoped<IVectorStore, SqliteVectorStore>();
+builder.Services.AddScoped<IPetAdSearchIndexer, PetAdSearchIndexer>();
+builder.Services.AddScoped<IAssistantService, AssistantService>();
+
+builder.Services
+    .AddOptions<AssistantOptions>()
+    .Bind(builder.Configuration.GetSection(AssistantOptions.SectionName))
+    .Validate(
+        options => options.MaxResults is >= 1 and <= AssistantOptions.MaxResultsUpperLimit,
+        $"Assistant:MaxResults must be between 1 and {AssistantOptions.MaxResultsUpperLimit}.")
+    .Validate(
+        options => options.MinSimilarity is >= -1 and <= 1,
+        "Assistant:MinSimilarity must be between -1 and 1.")
+    .ValidateOnStart();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {

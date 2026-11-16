@@ -7,9 +7,24 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityUser
 {
     public DbSet<PetAd> PetAds => Set<PetAd>();
 
+    public DbSet<PetAdEmbedding> PetAdEmbeddings => Set<PetAdEmbedding>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        builder.Entity<PetAdEmbedding>(embedding =>
+        {
+            embedding.HasKey(item => item.PetAdId);
+            embedding.Property(item => item.Vector).IsRequired();
+            embedding.Property(item => item.Model).HasMaxLength(100).IsRequired();
+
+            // A hard-deleted ad must not leave a vector behind.
+            embedding.HasOne<PetAd>()
+                .WithOne()
+                .HasForeignKey<PetAdEmbedding>(item => item.PetAdId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
 
         builder.Entity<PetAd>(ad =>
         {
