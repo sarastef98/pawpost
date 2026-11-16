@@ -78,6 +78,30 @@ public class ClosePetAdCancellationTests
         Assert.DoesNotContain(provider.Messages, message => message.StartsWith("Warning|"));
     }
 
+    // Positive control for the test above: with the same arrangement, a real removal failure is captured
+    // as a warning. This proves the log capture reaches the service, so "no warning" is a real result.
+    [Fact]
+    public async Task CloseAsync_RemovalFailsAfterCancelledRequest_LogsIndexWarning()
+    {
+        // Arrange
+        var provider = new CapturingLoggerProvider();
+        using var factory = new CancelFactory(new CancelAfterSaveInterceptor());
+        using var loggedFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureLogging(logging => logging.AddProvider(provider)));
+        var (scope, ownerId, ad) = await ArrangeOwnerWithIndexedAdAsync(factory, loggedFactory);
+        using var disposeScope = scope;
+        var service = scope.ServiceProvider.GetRequiredService<IPetAdService>();
+        factory.VectorStore.RemoveExceptionToThrow = new InvalidOperationException("storage down");
+
+        // Act
+        await service.CloseAsync(ad.Id, ownerId, factory.Interceptor.Token);
+
+        // Assert
+        Assert.True(factory.Interceptor.HasRun);
+        Assert.Contains(provider.Messages, message =>
+            message.StartsWith("Warning|") && message.Contains(ad.Id.ToString()));
+    }
+
     // Seeds an owner with an indexed Active ad, arms the interceptor and creates a scope for the service.
     private static async Task<(IServiceScope Scope, Guid OwnerId, PetAd Ad)> ArrangeOwnerWithIndexedAdAsync(
         CancelFactory factory, WebApplicationFactory<Program> host)
