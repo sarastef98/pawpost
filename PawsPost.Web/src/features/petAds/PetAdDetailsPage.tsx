@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import EmptyState from '../../components/EmptyState'
 import ErrorMessage from '../../components/ErrorMessage'
 import Notice from '../../components/Notice'
 import Spinner from '../../components/Spinner'
 import { useAuth } from '../auth/useAuth'
+import ClosePetAdButton from './ClosePetAdButton'
 import PetAdDetails from './PetAdDetails'
 import { usePetAd } from './usePetAd'
 
@@ -42,6 +43,8 @@ export default function PetAdDetailsPage() {
 }
 
 function LoadedAd({ id }: { id: string }) {
+  const { status, user } = useAuth()
+  const navigate = useNavigate()
   const { state, retry } = usePetAd(id, true)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const pendingFocus = useRef(false)
@@ -59,12 +62,33 @@ function LoadedAd({ id }: { id: string }) {
     retry()
   }
 
+  function reloadAd() {
+    pendingFocus.current = true
+    retry()
+  }
+
+  function goHome() {
+    void navigate('/', {
+      replace: true,
+      state: { notice: 'Your ad was closed.' },
+    })
+  }
+
   if (state.status === 'unauthorized') return <Navigate to="/login" replace />
   if (state.status === 'success') {
     return (
       <>
         <Notice />
         <PetAdDetails ad={state.ad} headingRef={headingRef} />
+        {isOwner(status, user?.id, state.ad.creator?.id) && (
+          <div>
+            <ClosePetAdButton
+              adId={state.ad.id}
+              onClosed={goHome}
+              onGone={reloadAd}
+            />
+          </div>
+        )}
       </>
     )
   }
@@ -89,5 +113,20 @@ function LoadedAd({ id }: { id: string }) {
         />
       )}
     </>
+  )
+}
+
+// Only decides what is shown. The server still decides (403). The ids are
+// compared without case, like on the creator profile page.
+function isOwner(
+  status: string,
+  userId: string | undefined,
+  creatorId: string | undefined,
+): boolean {
+  return (
+    status === 'loggedIn' &&
+    userId !== undefined &&
+    creatorId !== undefined &&
+    userId.toLowerCase() === creatorId.toLowerCase()
   )
 }
