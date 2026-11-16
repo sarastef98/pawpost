@@ -83,6 +83,12 @@ public static class PetAdTestHelpers
         return client.GetAsync($"{PetAdsUrl}/{id}");
     }
 
+    public static Task<HttpResponseMessage> GetCreatorAsync(this HttpClient client, string id, string? query = null)
+    {
+        var url = $"/api/creators/{id}";
+        return client.GetAsync(string.IsNullOrEmpty(query) ? url : $"{url}?{query}");
+    }
+
     /// <summary>A PetAd with fixed values. Pass the owner id of a seeded user.</summary>
     public static PetAd BuildPetAd(
         Guid ownerId,
