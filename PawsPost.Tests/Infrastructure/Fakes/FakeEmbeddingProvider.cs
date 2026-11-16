@@ -19,9 +19,17 @@ public class FakeEmbeddingProvider : IEmbeddingProvider
 
     public Exception? ExceptionToThrow { get; set; }
 
+    /// <summary>When set, embedding fails (with an <see cref="AiProviderException"/>) only for texts this matches.</summary>
+    public Func<string, bool>? FailWhen { get; set; }
+
     public Task<float[]> EmbedAsync(string text, EmbeddingPurpose purpose, CancellationToken cancellationToken)
     {
         _calls.Add((text, purpose));
+
+        if (FailWhen is not null && FailWhen(text))
+        {
+            throw new AiProviderException("Fake provider failure for a chosen text.");
+        }
 
         if (ExceptionToThrow is not null)
         {

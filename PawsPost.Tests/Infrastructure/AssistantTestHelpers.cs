@@ -69,6 +69,14 @@ public static class AssistantTestHelpers
         await db.SaveChangesAsync();
     }
 
+    /// <summary>Runs the re-embedding step once, in its own scope.</summary>
+    public static async Task<PetAdReindexResult> ReindexAsync(this WebApplicationFactory<Program> factory)
+    {
+        using var scope = factory.Services.CreateScope();
+        var service = scope.ServiceProvider.GetRequiredService<IPetAdReindexService>();
+        return await service.ReindexMissingAsync(CancellationToken.None);
+    }
+
     public static PetAdSearchText ToSearchText(PetAd ad) =>
         new(ad.Id, ad.Title, ad.Type, ad.Species, ad.Breed, ad.AgeInMonths, ad.Description, ad.Location);
 }

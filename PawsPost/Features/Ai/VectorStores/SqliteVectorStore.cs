@@ -47,6 +47,24 @@ public class SqliteVectorStore(AppDbContext dbContext, TimeProvider timeProvider
             .ExecuteDeleteAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlySet<Guid>> GetIndexedIdsAsync(
+        IReadOnlyCollection<Guid> petAdIds, CancellationToken cancellationToken)
+    {
+        if (petAdIds.Count == 0)
+        {
+            return new HashSet<Guid>();
+        }
+
+        var ids = petAdIds.ToList();
+        var found = await dbContext.PetAdEmbeddings
+            .AsNoTracking()
+            .Where(item => ids.Contains(item.PetAdId))
+            .Select(item => item.PetAdId)
+            .ToListAsync(cancellationToken);
+
+        return found.ToHashSet();
+    }
+
     public async Task<IReadOnlyList<VectorMatch>> SearchAsync(
         float[] query, string model, int top, double minScore, CancellationToken cancellationToken)
     {

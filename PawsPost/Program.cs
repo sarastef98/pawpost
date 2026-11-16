@@ -68,6 +68,7 @@ builder.Services.AddGeminiProviders(builder.Configuration);
 
 builder.Services.AddScoped<IVectorStore, SqliteVectorStore>();
 builder.Services.AddScoped<IPetAdSearchIndexer, PetAdSearchIndexer>();
+builder.Services.AddScoped<IPetAdReindexService, PetAdReindexService>();
 builder.Services.AddScoped<IAssistantService, AssistantService>();
 
 builder.Services
@@ -104,6 +105,21 @@ builder.Services
 
 var app = builder.Build();
 
+// One-off maintenance mode: run the re-embedding step, print the result and exit without starting the server.
+if (args.Contains(PetAdReindexCommand.Name))
+{
+    // The host is not started here, so Ctrl+C is wired to the token directly.
+    // e.Cancel keeps the process alive long enough to stop between ads cleanly.
+    using var cancellation = new CancellationTokenSource();
+    Console.CancelKeyPress += (_, e) =>
+    {
+        e.Cancel = true;
+        cancellation.Cancel();
+    };
+
+    return await PetAdReindexCommand.RunAsync(app.Services, Console.Out, cancellation.Token);
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -125,6 +141,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+return 0;
 
 static async Task WriteProblemAsync(HttpContext httpContext, int statusCode, string title)
 {
