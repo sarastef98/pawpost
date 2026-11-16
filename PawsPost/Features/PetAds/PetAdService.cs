@@ -168,7 +168,15 @@ public class PetAdService(
 
         // Soft close: the row stays.
         ad.Status = PetAdStatus.Closed;
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            // Status is a concurrency token: if another request closed the ad meanwhile, the update matches no row.
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return ClosePetAdOutcome.NotActive;
+        }
 
         await TryRemoveFromIndexAsync(ad.Id, cancellationToken);
 
