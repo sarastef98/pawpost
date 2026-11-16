@@ -98,6 +98,9 @@ export function mapFormErrors(
     return { general: WRONG_CREDENTIALS_MESSAGE }
   }
   if (kind === 'register' && status === 409) {
+    // Matching on the title is fragile: if it changes, a taken name falls
+    // back to the email message. Issues #47 and #48 replace this with a
+    // stable error code.
     if (readTitle(error) === DISPLAY_NAME_TAKEN_TITLE) {
       return { displayName: DISPLAY_NAME_TAKEN_MESSAGE }
     }

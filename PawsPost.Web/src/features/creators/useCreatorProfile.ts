@@ -41,6 +41,8 @@ export function useCreatorProfile(id: string, page: number) {
           if (profile !== null) outcome = { status: 'success', profile }
         } else if (code === 404 || code === 400) {
           // A bad id can never be fixed by trying again, so show "not found".
+          // A 400 can only mean an invalid creator id, because page and
+          // pageSize are validated on the client before the request.
           outcome = { status: 'notFound' }
         }
       } catch {
