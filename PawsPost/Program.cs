@@ -68,6 +68,7 @@ builder.Services.AddGeminiProviders(builder.Configuration);
 
 builder.Services.AddScoped<IVectorStore, SqliteVectorStore>();
 builder.Services.AddScoped<IPetAdSearchIndexer, PetAdSearchIndexer>();
+builder.Services.AddScoped<IPetAdReindexService, PetAdReindexService>();
 builder.Services.AddScoped<IAssistantService, AssistantService>();
 
 builder.Services
