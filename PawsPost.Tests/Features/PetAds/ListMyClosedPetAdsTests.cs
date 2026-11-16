@@ -488,8 +488,12 @@ public class ListMyClosedPetAdsTests
         const string displayName = "Secret Display Name";
         var provider = new CapturingLoggerProvider();
         using var factory = new PawsPostFactory();
+        // The hosting filter makes the "Request starting" line reach the capturing provider,
+        // so the test can prove that this request was logged and inspected.
         using var loggedFactory = factory.WithWebHostBuilder(builder =>
-            builder.ConfigureLogging(logging => logging.AddProvider(provider)));
+            builder.ConfigureLogging(logging => logging
+                .AddProvider(provider)
+                .AddFilter<CapturingLoggerProvider>("Microsoft.AspNetCore.Hosting", LogLevel.Information)));
         var client = await loggedFactory.CreateLoggedInClientAsync(email, displayName);
         var ownerId = await client.GetMyIdAsync();
         await loggedFactory.SeedAdsAsync(BuildPetAd(ownerId, Day1, status: PetAdStatus.Closed));
@@ -499,7 +503,7 @@ public class ListMyClosedPetAdsTests
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.NotEmpty(provider.Messages);
+        Assert.Contains(provider.Messages, message => message.Contains("/mine/closed", StringComparison.Ordinal));
         Assert.All(provider.Messages, message =>
         {
             Assert.DoesNotContain(email, message, StringComparison.OrdinalIgnoreCase);
