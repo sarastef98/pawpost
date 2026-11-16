@@ -213,3 +213,33 @@ describe('App create ad route', () => {
     expect(screen.getByLabelText('Title')).toBeInTheDocument()
   })
 })
+
+describe('App assistant route', () => {
+  it('shows the assistant page inside the layout at the assistant route', () => {
+    const value = {
+      status: 'loggedIn' as const,
+      user: { id: 'u1', email: 'sara@example.com' },
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+    }
+    render(
+      <MemoryRouter initialEntries={['/assistant']}>
+        <AuthContext.Provider value={value}>
+          <App />
+        </AuthContext.Provider>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('banner')).toBeInTheDocument()
+    expect(screen.getByRole('main')).toBeInTheDocument()
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', {
+        level: 1,
+        name: 'Find a pet with the assistant',
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('Your question')).toBeInTheDocument()
+  })
+})
