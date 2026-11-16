@@ -148,6 +148,31 @@ namespace PawsPost.Data.Migrations
                     b.ToTable("PetAds");
                 });
 
+            modelBuilder.Entity("PawsPost.Data.PetAdEmbedding", b =>
+                {
+                    b.Property<Guid>("PetAdId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Dimensions")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("Vector")
+                        .IsRequired()
+                        .HasColumnType("BLOB");
+
+                    b.HasKey("PetAdId");
+
+                    b.ToTable("PetAdEmbeddings");
+                });
+
             modelBuilder.Entity("PawsPost.Data.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -250,6 +275,15 @@ namespace PawsPost.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("PawsPost.Data.PetAdEmbedding", b =>
+                {
+                    b.HasOne("PawsPost.Data.PetAd", null)
+                        .WithOne()
+                        .HasForeignKey("PawsPost.Data.PetAdEmbedding", "PetAdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }
