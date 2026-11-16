@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -291,6 +292,54 @@ public class ClosePetAdTests
         await AssertProblemAsync(second, HttpStatusCode.Conflict);
     }
 
+    // Error body shape: 403 and 409 have the same ProblemDetails fields as the other errors (type, title, status, traceId).
+
+    [Fact]
+    public async Task ClosePetAd_NotOwner_ReturnsStandardProblemShape()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var (_, _, ad) = await factory.CreateLoggedInOwnerWithAdAsync(OwnerEmail);
+        var other = await factory.CreateLoggedInClientAsync(OtherEmail);
+
+        // Act
+        var response = await other.ClosePetAdAsync(ad.Id.ToString());
+
+        // Assert
+        var problem = await AssertStandardProblemShapeAsync(response, HttpStatusCode.Forbidden);
+        Assert.Equal("Not the owner of this ad", problem.GetProperty("title").GetString());
+    }
+
+    [Fact]
+    public async Task ClosePetAd_OwnerOnAlreadyClosedAd_ReturnsStandardProblemShape()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var (client, _, ad) = await factory.CreateLoggedInOwnerWithAdAsync(OwnerEmail, PetAdStatus.Closed);
+
+        // Act
+        var response = await client.ClosePetAdAsync(ad.Id.ToString());
+
+        // Assert
+        var problem = await AssertStandardProblemShapeAsync(response, HttpStatusCode.Conflict);
+        Assert.Equal("Ad cannot be closed", problem.GetProperty("title").GetString());
+        Assert.Equal("Only Active ads can be closed.", problem.GetProperty("detail").GetString());
+    }
+
+    [Fact]
+    public async Task ClosePetAd_UnknownId_ReturnsStandardProblemShape()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync(OwnerEmail);
+
+        // Act
+        var response = await client.ClosePetAdAsync(Guid.NewGuid().ToString());
+
+        // Assert
+        await AssertStandardProblemShapeAsync(response, HttpStatusCode.NotFound);
+    }
+
     // Search index failure and logging
 
     [Fact]
@@ -398,6 +447,20 @@ public class ClosePetAdTests
             Assert.DoesNotContain(ad.Title, message);
             Assert.DoesNotContain(ad.Description, message);
         });
+    }
+
+    // The shape every error body in the app has: a type link, a title, the status and a traceId.
+    private static async Task<JsonElement> AssertStandardProblemShapeAsync(
+        HttpResponseMessage response, HttpStatusCode expected)
+    {
+        Assert.Equal(expected, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.StartsWith("https://", problem.GetProperty("type").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("title").GetString()));
+        Assert.Equal((int)expected, problem.GetProperty("status").GetInt32());
+        Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("traceId").GetString()));
+        return problem;
     }
 
     private static async Task<ProblemDetails> AssertProblemAsync(HttpResponseMessage response, HttpStatusCode expected)
