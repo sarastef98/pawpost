@@ -35,7 +35,7 @@ public class ListMyClosedPetAdsTests
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var json = await ReadJsonAsync(response);
-        Assert.Equal([second.Id, first.Id], ItemIds(json));
+        Assert.Equal([second.Id, first.Id], ItemIds(json.RootElement));
         Assert.Equal(["Second", "First"], json.RootElement.GetProperty("items").EnumerateArray()
             .Select(item => item.GetProperty("title").GetString()).ToList());
         Assert.Equal(2, json.RootElement.GetProperty("totalCount").GetInt32());
@@ -56,7 +56,7 @@ public class ListMyClosedPetAdsTests
 
         // Assert
         using var json = await ReadJsonAsync(response);
-        Assert.Equal([closed.Id], ItemIds(json));
+        Assert.Equal([closed.Id], ItemIds(json.RootElement));
         Assert.Equal(1, json.RootElement.GetProperty("totalCount").GetInt32());
     }
 
@@ -77,7 +77,7 @@ public class ListMyClosedPetAdsTests
 
         // Assert
         using var json = await ReadJsonAsync(response);
-        Assert.Equal([closed.Id], ItemIds(json));
+        Assert.Equal([closed.Id], ItemIds(json.RootElement));
         Assert.Equal(1, json.RootElement.GetProperty("totalCount").GetInt32());
     }
 
@@ -97,7 +97,7 @@ public class ListMyClosedPetAdsTests
 
         // Assert
         using var json = await ReadJsonAsync(response);
-        Assert.Equal([mine.Id], ItemIds(json));
+        Assert.Equal([mine.Id], ItemIds(json.RootElement));
         Assert.Equal(1, json.RootElement.GetProperty("totalCount").GetInt32());
     }
 
@@ -118,7 +118,7 @@ public class ListMyClosedPetAdsTests
 
         // Assert
         using var json = await ReadJsonAsync(response);
-        Assert.Equal([newest.Id, middle.Id, oldest.Id], ItemIds(json));
+        Assert.Equal([newest.Id, middle.Id, oldest.Id], ItemIds(json.RootElement));
     }
 
     [Fact]
@@ -139,7 +139,7 @@ public class ListMyClosedPetAdsTests
 
         // Assert
         using var json = await ReadJsonAsync(response);
-        Assert.Equal([highId.Id, lowId.Id], ItemIds(json));
+        Assert.Equal([highId.Id, lowId.Id], ItemIds(json.RootElement));
     }
 
     [Fact]
@@ -268,8 +268,8 @@ public class ListMyClosedPetAdsTests
         // Assert
         using var jsonA = await ReadJsonAsync(responseA);
         using var jsonB = await ReadJsonAsync(responseB);
-        Assert.Equal([adA.Id], ItemIds(jsonA));
-        Assert.Equal([adB.Id], ItemIds(jsonB));
+        Assert.Equal([adA.Id], ItemIds(jsonA.RootElement));
+        Assert.Equal([adB.Id], ItemIds(jsonB.RootElement));
     }
 
     [Fact]
@@ -290,7 +290,7 @@ public class ListMyClosedPetAdsTests
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var json = await ReadJsonAsync(response);
-        Assert.Equal([adB.Id], ItemIds(json));
+        Assert.Equal([adB.Id], ItemIds(json.RootElement));
     }
 
     // Routing
@@ -348,7 +348,7 @@ public class ListMyClosedPetAdsTests
         // Assert
         using var json = await ReadJsonAsync(response);
         var expected = ads.OrderBy(ad => ad.CreatedAt).Take(5).Select(ad => ad.Id).Reverse().ToList();
-        Assert.Equal(expected, ItemIds(json));
+        Assert.Equal(expected, ItemIds(json.RootElement));
         Assert.Equal(2, json.RootElement.GetProperty("page").GetInt32());
         Assert.Equal(25, json.RootElement.GetProperty("totalCount").GetInt32());
     }
@@ -510,7 +510,7 @@ public class ListMyClosedPetAdsTests
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var json = await ReadJsonAsync(response);
-        Assert.Equal([ad.Id], ItemIds(json));
+        Assert.Equal([ad.Id], ItemIds(json.RootElement));
         Assert.Equal(1, json.RootElement.GetProperty("totalCount").GetInt32());
     }
 
@@ -529,7 +529,7 @@ public class ListMyClosedPetAdsTests
 
         // Assert
         using var json = await ReadJsonAsync(response);
-        Assert.Equal([stillActive.Id], ItemIds(json));
+        Assert.Equal([stillActive.Id], ItemIds(json.RootElement));
     }
 
     [Theory]
@@ -550,7 +550,7 @@ public class ListMyClosedPetAdsTests
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var json = await ReadJsonAsync(response);
-        Assert.Empty(ItemIds(json));
+        Assert.Empty(ItemIds(json.RootElement));
         Assert.Equal(0, json.RootElement.GetProperty("totalCount").GetInt32());
     }
 
@@ -640,12 +640,6 @@ public class ListMyClosedPetAdsTests
         return Enumerable.Range(0, count)
             .Select(index => BuildPetAd(ownerId, Day1.AddMinutes(index), status: PetAdStatus.Closed))
             .ToArray();
-    }
-
-    private static List<Guid> ItemIds(JsonDocument json)
-    {
-        return json.RootElement.GetProperty("items").EnumerateArray()
-            .Select(item => item.GetProperty("id").GetGuid()).ToList();
     }
 
     private static async Task<JsonDocument> ReadJsonAsync(HttpResponseMessage response)
