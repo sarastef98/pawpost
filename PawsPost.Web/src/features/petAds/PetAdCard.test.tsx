@@ -88,3 +88,35 @@ describe('PetAdCard', () => {
     )
   })
 })
+
+describe('PetAdCard creator', () => {
+  it('shows the creator name as plain text', () => {
+    renderCard({ creator: { id: 'c1', displayName: 'Anna' } })
+
+    expect(screen.getByText('By Anna')).toBeInTheDocument()
+  })
+
+  it('has exactly one link, to the ad, and the name is not a link', () => {
+    renderCard({ id: 'ad-7', creator: { id: 'c1', displayName: 'Anna' } })
+
+    const links = screen.getAllByRole('link')
+    expect(links).toHaveLength(1)
+    expect(links[0]).toHaveAttribute('href', '/pet-ads/ad-7')
+    expect(links[0]).toHaveTextContent('By Anna')
+  })
+
+  it('hides the creator line when the creator is missing and keeps the rest', () => {
+    renderCard({ creator: null })
+
+    expect(screen.queryByText(/^By /)).not.toBeInTheDocument()
+    expect(screen.getByText('Friendly Rex')).toBeInTheDocument()
+    expect(screen.getByText('Skopje')).toBeInTheDocument()
+  })
+
+  it('shows a name with HTML characters as text', () => {
+    renderCard({ creator: { id: 'c1', displayName: '<b>Anna</b>' } })
+
+    expect(screen.getByText('By <b>Anna</b>')).toBeInTheDocument()
+    expect(document.querySelector('b')).toBeNull()
+  })
+})

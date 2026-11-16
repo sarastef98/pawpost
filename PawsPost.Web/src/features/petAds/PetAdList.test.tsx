@@ -762,3 +762,34 @@ describe('PetAdList', () => {
     })
   })
 })
+
+describe('PetAdList creator', () => {
+  beforeEach(() => {
+    get.mockReset()
+  })
+
+  it('shows the creator name on each card', async () => {
+    get.mockResolvedValue(
+      okResult(
+        listBody([
+          ad({ id: 'a', creator: { id: 'c1', displayName: 'Anna' } }),
+          ad({ id: 'b', creator: { id: 'c2', displayName: 'Boris' } }),
+        ]),
+      ),
+    )
+    renderList()
+
+    expect(await screen.findByText('By Anna')).toBeInTheDocument()
+    expect(screen.getByText('By Boris')).toBeInTheDocument()
+  })
+
+  it('shows an ad with an unreadable creator without the creator line', async () => {
+    get.mockResolvedValue(
+      okResult(listBody([ad({ creator: { id: '', displayName: 5 } })])),
+    )
+    renderList()
+
+    expect(await screen.findByText('Friendly Rex')).toBeInTheDocument()
+    expect(screen.queryByText(/^By /)).not.toBeInTheDocument()
+  })
+})

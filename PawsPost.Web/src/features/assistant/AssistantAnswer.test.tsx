@@ -69,3 +69,25 @@ describe('AssistantAnswer', () => {
     expect(screen.queryByRole('link', { name: 'Browse all ads' })).toBeNull()
   })
 })
+
+describe('AssistantAnswer creator', () => {
+  it('shows "By <name>" as plain text and keeps one link per card', () => {
+    renderAnswer(
+      'Here.',
+      ads({ id: 'ad-9', creator: { id: 'c1', displayName: 'Anna' } }),
+    )
+
+    expect(screen.getByText('By Anna')).toBeInTheDocument()
+    const links = screen.getAllByRole('link')
+    expect(links).toHaveLength(1)
+    expect(links[0]).toHaveAttribute('href', '/pet-ads/ad-9')
+  })
+
+  it('shows no creator line and the rest of the card when the creator is missing', () => {
+    renderAnswer('Here.', ads({ creator: undefined }))
+
+    expect(screen.queryByText(/^By /)).toBeNull()
+    expect(screen.getByText('Friendly Rex')).toBeInTheDocument()
+    expect(screen.getByText('Skopje')).toBeInTheDocument()
+  })
+})
