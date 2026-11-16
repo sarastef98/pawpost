@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using PawsPost.Data;
 using PawsPost.Features.Ai;
@@ -75,26 +76,10 @@ public class PetAdService(
             .ThenByDescending(petAd => petAd.Id)
             .Skip((int)offset)
             .Take(request.PageSize)
-            .Select(petAd => new
-            {
-                petAd.Id,
-                petAd.Title,
-                petAd.Type,
-                petAd.Species,
-                petAd.Price,
-                petAd.Location,
-                petAd.CreatedAt
-            })
+            .Select(ListItemSelector)
             .ToListAsync(cancellationToken);
 
-        // SQLite returns DateTime with Kind Unspecified. Mark it as UTC so the JSON ends with "Z".
-        var items = rows
-            .Select(row => new PetAdListItemResponse(
-                row.Id, row.Title, row.Type, row.Species, row.Price, row.Location,
-                DateTime.SpecifyKind(row.CreatedAt, DateTimeKind.Utc)))
-            .ToList();
-
-        return new PetAdListResponse(items, totalCount, request.Page, request.PageSize);
+        return new PetAdListResponse(rows.Select(ToListItem).ToList(), totalCount, request.Page, request.PageSize);
     }
 
     public async Task<PetAdDetailsResponse?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
@@ -115,7 +100,9 @@ public class PetAdService(
                 petAd.Price,
                 petAd.Location,
                 petAd.Status,
-                petAd.CreatedAt
+                petAd.CreatedAt,
+                CreatorId = petAd.OwnerId,
+                CreatorDisplayName = petAd.Owner!.DisplayName
             })
             .SingleOrDefaultAsync(cancellationToken);
 
@@ -127,8 +114,42 @@ public class PetAdService(
         // SQLite returns DateTime with Kind Unspecified. Mark it as UTC so the JSON ends with "Z".
         return new PetAdDetailsResponse(
             row.Id, row.Title, row.Type, row.Species, row.Breed, row.AgeInMonths, row.Description,
-            row.Price, row.Location, row.Status, DateTime.SpecifyKind(row.CreatedAt, DateTimeKind.Utc));
+            row.Price, row.Location, row.Status, DateTime.SpecifyKind(row.CreatedAt, DateTimeKind.Utc),
+            new PetAdCreatorResponse(row.CreatorId, row.CreatorDisplayName));
     }
+
+    // One projection for every list of ads, so all list items have exactly the same public fields.
+    // It reads only the creator's id and display name, never the email, phone or user name.
+    private static readonly Expression<Func<PetAd, ListItemRow>> ListItemSelector = petAd => new ListItemRow(
+        petAd.Id,
+        petAd.Title,
+        petAd.Type,
+        petAd.Species,
+        petAd.Price,
+        petAd.Location,
+        petAd.CreatedAt,
+        petAd.OwnerId,
+        petAd.Owner!.DisplayName);
+
+    private static PetAdListItemResponse ToListItem(ListItemRow row)
+    {
+        // SQLite returns DateTime with Kind Unspecified. Mark it as UTC so the JSON ends with "Z".
+        return new PetAdListItemResponse(
+            row.Id, row.Title, row.Type, row.Species, row.Price, row.Location,
+            DateTime.SpecifyKind(row.CreatedAt, DateTimeKind.Utc),
+            new PetAdCreatorResponse(row.CreatorId, row.CreatorDisplayName));
+    }
+
+    private sealed record ListItemRow(
+        Guid Id,
+        string Title,
+        PetAdType Type,
+        PetSpecies Species,
+        decimal? Price,
+        string? Location,
+        DateTime CreatedAt,
+        Guid CreatorId,
+        string CreatorDisplayName);
 
     // The ad is already saved. If the AI provider fails, the ad stays and is just not searchable yet.
     // Only provider failures are caught here. A storage (database) failure is unexpected and is not hidden.

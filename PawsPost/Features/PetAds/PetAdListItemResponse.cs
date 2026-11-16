@@ -3,7 +3,8 @@ using PawsPost.Data;
 
 namespace PawsPost.Features.PetAds;
 
-// Only the fields a list card needs. Never add owner data here.
+// Only the fields a list card needs. The creator is only the public id and display name (client decision in #44).
+// Never add owner email, phone or user name here.
 public record PetAdListItemResponse(
     Guid Id,
     string Title,
@@ -11,4 +12,5 @@ public record PetAdListItemResponse(
     [property: JsonConverter(typeof(JsonStringEnumConverter<PetSpecies>))] PetSpecies Species,
     decimal? Price,
     string? Location,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    PetAdCreatorResponse Creator);

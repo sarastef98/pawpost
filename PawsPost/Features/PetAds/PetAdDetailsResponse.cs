@@ -3,7 +3,7 @@ using PawsPost.Data;
 
 namespace PawsPost.Features.PetAds;
 
-// Never add owner email, phone or owner id here.
+// The creator is only the public id and display name (client decision in #44). Never add owner email, phone or user name here.
 public record PetAdDetailsResponse(
     Guid Id,
     string Title,
@@ -15,4 +15,5 @@ public record PetAdDetailsResponse(
     decimal? Price,
     string? Location,
     [property: JsonConverter(typeof(JsonStringEnumConverter<PetAdStatus>))] PetAdStatus Status,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    PetAdCreatorResponse Creator);
