@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import HomePage from './HomePage'
@@ -63,9 +63,11 @@ describe('HomePage notice', () => {
   it('shows no notice text when opened directly', async () => {
     renderHomeWithState()
 
-    await screen.findByText(
-      'Find a new friend or help a pet find a loving home.',
-    )
+    // The notice fills its text on the next tick, so let that tick pass first.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
     expect(screen.queryByText('Your ad was closed.')).toBeNull()
   })
 })
