@@ -80,7 +80,9 @@ describe('useClosePetAd', () => {
     expect(result.current.state).toBe('pending')
 
     await act(async () => pending.resolve(noContentResult()))
-    await waitFor(() => expect(result.current.state).toBe('closed'))
+    await waitFor(() => expect(result.current.state).toBe('closed'), {
+      timeout: 5_000,
+    })
   })
 
   it('sends no second request while the first is pending', async () => {

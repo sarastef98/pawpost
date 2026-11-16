@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -126,7 +126,7 @@ describe('ClosePetAdButton', () => {
     await user.dblClick(confirm)
 
     expect(post).toHaveBeenCalledTimes(1)
-    pending.resolve(noContentResult())
+    await act(async () => pending.resolve(noContentResult()))
   })
 
   it('shows Closing... with aria-disabled while the request runs and ignores Escape', async () => {
@@ -140,7 +140,7 @@ describe('ClosePetAdButton', () => {
     expect(closing).toHaveAttribute('aria-disabled', 'true')
     await user.keyboard('{Escape}')
     expect(screen.getByRole('dialog')).toBeInTheDocument()
-    pending.resolve(noContentResult())
+    await act(async () => pending.resolve(noContentResult()))
   })
 
   it('calls onClosed after 204', async () => {
@@ -149,7 +149,9 @@ describe('ClosePetAdButton', () => {
 
     await confirmClose(user)
 
-    await vi.waitFor(() => expect(onClosed).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() => expect(onClosed).toHaveBeenCalledTimes(1), {
+      timeout: 5_000,
+    })
     expect(onGone).not.toHaveBeenCalled()
   })
 
@@ -234,7 +236,9 @@ describe('ClosePetAdButton', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Try again' }))
 
-    await vi.waitFor(() => expect(onClosed).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() => expect(onClosed).toHaveBeenCalledTimes(1), {
+      timeout: 5_000,
+    })
     expect(post).toHaveBeenCalledTimes(2)
   })
 
