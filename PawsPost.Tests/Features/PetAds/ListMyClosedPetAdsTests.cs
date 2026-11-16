@@ -196,12 +196,47 @@ public class ListMyClosedPetAdsTests
         var response = await client.GetMyClosedPetAdsAsync();
 
         // Assert
+        // A raw comparison is safe: PetAdListItemResponse has no field that changes on close (no updated-at).
         using var json = await ReadJsonAsync(response);
         var closedItem = json.RootElement.GetProperty("items").EnumerateArray().Single();
         Assert.Equal(activeRaw, closedItem.GetRawText());
-        Assert.Equal(ownerId, closedItem.GetProperty("creator").GetProperty("id").GetGuid());
-        Assert.Equal("Anna K", closedItem.GetProperty("creator").GetProperty("displayName").GetString());
-        Assert.False(closedItem.TryGetProperty("status", out _));
+    }
+
+    [Fact]
+    public async Task ListMyClosedPetAds_AdItem_HasCallerAsCreator()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("owner@x.com", "Anna K");
+        var ownerId = await client.GetMyIdAsync();
+        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, status: PetAdStatus.Closed));
+
+        // Act
+        var response = await client.GetMyClosedPetAdsAsync();
+
+        // Assert
+        using var json = await ReadJsonAsync(response);
+        var creator = json.RootElement.GetProperty("items").EnumerateArray().Single().GetProperty("creator");
+        Assert.Equal(ownerId, creator.GetProperty("id").GetGuid());
+        Assert.Equal("Anna K", creator.GetProperty("displayName").GetString());
+    }
+
+    [Fact]
+    public async Task ListMyClosedPetAds_AdItem_HasNoStatusField()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("owner@x.com", "Anna K");
+        var ownerId = await client.GetMyIdAsync();
+        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, status: PetAdStatus.Closed));
+
+        // Act
+        var response = await client.GetMyClosedPetAdsAsync();
+
+        // Assert
+        using var json = await ReadJsonAsync(response);
+        var item = json.RootElement.GetProperty("items").EnumerateArray().Single();
+        Assert.False(item.TryGetProperty("status", out _));
     }
 
     // Authorization
