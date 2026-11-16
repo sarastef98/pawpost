@@ -200,6 +200,10 @@ describe('AuthNav', () => {
     await user.tab()
     expect(screen.getByRole('link', { name: 'PawsPost' })).toHaveFocus()
     await user.tab()
+    expect(
+      screen.getByRole('link', { name: 'Ask the assistant' }),
+    ).toHaveFocus()
+    await user.tab()
     expect(screen.getByRole('link', { name: 'Post an ad' })).toHaveFocus()
     await user.tab()
 
