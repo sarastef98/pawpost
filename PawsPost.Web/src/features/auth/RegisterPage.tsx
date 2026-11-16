@@ -16,6 +16,7 @@ export default function RegisterPage() {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [errors, setErrors] = useState<FormErrors>({})
   const [busy, setBusy] = useState(false)
   const submitting = useRef(false)
@@ -49,7 +50,15 @@ export default function RegisterPage() {
     if (password === '') {
       clientErrors.password = 'Please enter your password.'
     }
-    if (clientErrors.email || clientErrors.password) {
+    // Length and characters are checked by the server only.
+    if (displayName.trim() === '') {
+      clientErrors.displayName = 'Please choose a public name.'
+    }
+    if (
+      clientErrors.email ||
+      clientErrors.password ||
+      clientErrors.displayName
+    ) {
       setErrors(clientErrors)
       return
     }
@@ -57,7 +66,7 @@ export default function RegisterPage() {
     submitting.current = true
     setBusy(true)
     setErrors({})
-    const result = await register(email.trim(), password)
+    const result = await register(email.trim(), password, displayName.trim())
     submitting.current = false
     setBusy(false)
     setPassword('')
@@ -109,6 +118,15 @@ export default function RegisterPage() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             errorText={errors.password}
+            readOnly={busy}
+          />
+          <TextField
+            label="Public name"
+            autoComplete="nickname"
+            helperText="3 to 30 characters. Letters, digits, spaces, hyphens (-) and underscores (_). Other people will see this name."
+            value={displayName}
+            onChange={(event) => setDisplayName(event.target.value)}
+            errorText={errors.displayName}
             readOnly={busy}
           />
           <Button type="submit" disabled={busy} aria-busy={busy}>

@@ -41,6 +41,7 @@ async function fillAndSubmit(
 ) {
   await user.type(await screen.findByLabelText('Email'), email)
   await user.type(screen.getByLabelText('Password'), password)
+  await user.type(screen.getByLabelText('Public name'), 'Sara Test')
   await user.click(screen.getByRole('button', { name: 'Create account' }))
 }
 
@@ -84,11 +85,7 @@ describe('RegisterPage', () => {
     renderRegister()
 
     await screen.findByLabelText('Email')
-    expect(
-      screen.queryByText(
-        /at least|characters|uppercase|lowercase|digit|symbol|special/i,
-      ),
-    ).toBeNull()
+    expect(screen.getByLabelText('Password')).not.toHaveAccessibleDescription()
   })
 
   it('links to the login page', async () => {
@@ -124,7 +121,11 @@ describe('RegisterPage', () => {
     await fillAndSubmit(user)
 
     expect(post).toHaveBeenCalledWith('/api/auth/register', {
-      body: { email: 'sara@example.com', password: 'Secret1!' },
+      body: {
+        email: 'sara@example.com',
+        password: 'Secret1!',
+        displayName: 'Sara Test',
+      },
     })
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Log in' }),
@@ -230,6 +231,7 @@ describe('RegisterPage', () => {
     renderRegister()
     await user.type(await screen.findByLabelText('Email'), 'sara@example.com')
     await user.type(screen.getByLabelText('Password'), 'Secret1!')
+    await user.type(screen.getByLabelText('Public name'), 'Sara Test')
 
     await user.dblClick(screen.getByRole('button', { name: 'Create account' }))
 
@@ -278,10 +280,17 @@ describe('RegisterPage', () => {
     await user.keyboard('sara@example.com')
     await user.tab()
     expect(screen.getByLabelText('Password')).toHaveFocus()
-    await user.keyboard('Secret1!{Enter}')
+    await user.keyboard('Secret1!')
+    await user.tab()
+    expect(screen.getByLabelText('Public name')).toHaveFocus()
+    await user.keyboard('Sara Test{Enter}')
 
     expect(post).toHaveBeenCalledWith('/api/auth/register', {
-      body: { email: 'sara@example.com', password: 'Secret1!' },
+      body: {
+        email: 'sara@example.com',
+        password: 'Secret1!',
+        displayName: 'Sara Test',
+      },
     })
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Log in' }),
