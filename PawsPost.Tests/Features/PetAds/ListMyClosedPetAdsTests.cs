@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using PawsPost.Data;
 using PawsPost.Tests.Infrastructure;
 using static PawsPost.Tests.Infrastructure.PetAdTestHelpers;
@@ -306,6 +308,195 @@ public class ListMyClosedPetAdsTests
         using var json = await ReadJsonAsync(response);
         Assert.Equal(JsonValueKind.Array, json.RootElement.GetProperty("items").ValueKind);
         Assert.Equal(0, json.RootElement.GetProperty("totalCount").GetInt32());
+    }
+
+    // Pagination and validation
+
+    [Fact]
+    public async Task ListMyClosedPetAds_NoPageSize_UsesDefaultOf20()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("owner@x.com", "Anna K");
+        await factory.SeedAdsAsync(SeedClosedAds(await client.GetMyIdAsync(), 25));
+
+        // Act
+        var response = await client.GetMyClosedPetAdsAsync();
+
+        // Assert
+        using var json = await ReadJsonAsync(response);
+        Assert.Equal(20, json.RootElement.GetProperty("items").GetArrayLength());
+        Assert.Equal(25, json.RootElement.GetProperty("totalCount").GetInt32());
+        Assert.Equal(1, json.RootElement.GetProperty("page").GetInt32());
+        Assert.Equal(20, json.RootElement.GetProperty("pageSize").GetInt32());
+    }
+
+    [Fact]
+    public async Task ListMyClosedPetAds_SecondPage_ReturnsRemainingAds()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("owner@x.com", "Anna K");
+        var ads = SeedClosedAds(await client.GetMyIdAsync(), 25);
+        await factory.SeedAdsAsync(ads);
+
+        // Act
+        var response = await client.GetMyClosedPetAdsAsync("page=2&pageSize=20");
+
+        // Assert
+        using var json = await ReadJsonAsync(response);
+        var expected = ads.OrderBy(ad => ad.CreatedAt).Take(5).Select(ad => ad.Id).Reverse().ToList();
+        Assert.Equal(expected, ItemIds(json));
+        Assert.Equal(2, json.RootElement.GetProperty("page").GetInt32());
+        Assert.Equal(25, json.RootElement.GetProperty("totalCount").GetInt32());
+    }
+
+    [Fact]
+    public async Task ListMyClosedPetAds_PageBeyondLastPage_ReturnsEmptyItemsWithTotalCount()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("owner@x.com", "Anna K");
+        await factory.SeedAdsAsync(SeedClosedAds(await client.GetMyIdAsync(), 3));
+
+        // Act
+        var response = await client.GetMyClosedPetAdsAsync("page=5&pageSize=10");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = await ReadJsonAsync(response);
+        Assert.Equal(0, json.RootElement.GetProperty("items").GetArrayLength());
+        Assert.Equal(3, json.RootElement.GetProperty("totalCount").GetInt32());
+    }
+
+    [Fact]
+    public async Task ListMyClosedPetAds_PageSizeExactly100_Returns200()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("owner@x.com", "Anna K");
+
+        // Act
+        var response = await client.GetMyClosedPetAdsAsync("pageSize=100");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = await ReadJsonAsync(response);
+        Assert.Equal(100, json.RootElement.GetProperty("pageSize").GetInt32());
+    }
+
+    [Fact]
+    public async Task ListMyClosedPetAds_PageSizeAbove100_Returns400()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("owner@x.com", "Anna K");
+
+        // Act
+        var response = await client.GetMyClosedPetAdsAsync("pageSize=101");
+
+        // Assert
+        await AssertBadRequestForOnlyAsync(response, "pageSize");
+    }
+
+    [Fact]
+    public async Task ListMyClosedPetAds_PageBelow1_Returns400()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("owner@x.com", "Anna K");
+
+        // Act
+        var response = await client.GetMyClosedPetAdsAsync("page=0");
+
+        // Assert
+        await AssertBadRequestForOnlyAsync(response, "page");
+    }
+
+    [Fact]
+    public async Task ListMyClosedPetAds_PageSizeBelow1_Returns400()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("owner@x.com", "Anna K");
+
+        // Act
+        var response = await client.GetMyClosedPetAdsAsync("pageSize=0");
+
+        // Assert
+        await AssertBadRequestForOnlyAsync(response, "pageSize");
+    }
+
+    [Fact]
+    public async Task ListMyClosedPetAds_PageNotANumber_Returns400()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("owner@x.com", "Anna K");
+
+        // Act
+        var response = await client.GetMyClosedPetAdsAsync("page=abc");
+
+        // Assert
+        await AssertBadRequestForOnlyAsync(response, "page");
+    }
+
+    // Privacy and logging
+
+    [Fact]
+    public async Task ListMyClosedPetAds_Response_HasNoEmailPhoneOrUserName()
+    {
+        // Arrange
+        const string email = "owner@x.com";
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync(email, "Anna K");
+        var ownerId = await client.GetMyIdAsync();
+        await factory.SeedAdsAsync(BuildPetAd(ownerId, Day1, status: PetAdStatus.Closed));
+
+        // Act
+        var response = await client.GetMyClosedPetAdsAsync();
+
+        // Assert
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Anna K", body);
+        Assert.DoesNotContain(email, body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("email", body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("phoneNumber", body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("userName", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ListMyClosedPetAds_Success_LogsNoPersonalData()
+    {
+        // Arrange
+        const string email = "private.person@example.com";
+        const string displayName = "Secret Display Name";
+        var provider = new CapturingLoggerProvider();
+        using var factory = new PawsPostFactory();
+        using var loggedFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureLogging(logging => logging.AddProvider(provider)));
+        var client = await loggedFactory.CreateLoggedInClientAsync(email, displayName);
+        var ownerId = await client.GetMyIdAsync();
+        await loggedFactory.SeedAdsAsync(BuildPetAd(ownerId, Day1, status: PetAdStatus.Closed));
+
+        // Act
+        var response = await client.GetMyClosedPetAdsAsync();
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotEmpty(provider.Messages);
+        Assert.All(provider.Messages, message =>
+        {
+            Assert.DoesNotContain(email, message, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(displayName, message, StringComparison.OrdinalIgnoreCase);
+        });
+    }
+
+    private static PetAd[] SeedClosedAds(Guid ownerId, int count)
+    {
+        return Enumerable.Range(0, count)
+            .Select(index => BuildPetAd(ownerId, Day1.AddMinutes(index), status: PetAdStatus.Closed))
+            .ToArray();
     }
 
     private static List<Guid> ItemIds(JsonDocument json)
