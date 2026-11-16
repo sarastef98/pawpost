@@ -4,18 +4,28 @@ import EmptyState from '../../components/EmptyState'
 import ErrorMessage from '../../components/ErrorMessage'
 import Spinner from '../../components/Spinner'
 import { totalPages } from '../petAds/petAdListQuery'
+import Tabs from '../../components/Tabs'
+import { useAuth } from '../auth/useAuth'
 import CreatorAdList from './CreatorAdList'
+import MyAdsTab from './MyAdsTab'
 import { parseProfilePage } from './creatorProfileData'
 import { useCreatorProfile } from './useCreatorProfile'
 
 const linkClasses = 'font-semibold text-primary underline'
 
-// Public page: no login is needed and the login state is not read.
+// Public page: no login is needed. The login state only decides whether the
+// owner sees their own tabs instead of the public ads list.
 export default function CreatorProfilePage() {
   const { id = '' } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const page = parseProfilePage(searchParams)
   const { state, retry } = useCreatorProfile(id, page)
+  const { status, user } = useAuth()
+  // Only decides what is shown. The server decides what /mine returns.
+  const isOwnProfile =
+    status === 'loggedIn' &&
+    user !== null &&
+    user.id.toLowerCase() === id.toLowerCase()
 
   const headingRef = useRef<HTMLHeadingElement>(null)
   const adsHeadingRef = useRef<HTMLHeadingElement>(null)
@@ -36,7 +46,12 @@ export default function CreatorProfilePage() {
     if (!outOfRange) return
     const lastPage = Math.max(pages, 1)
     setSearchParams(
-      lastPage > 1 ? { page: String(lastPage) } : new URLSearchParams(),
+      (current) => {
+        const params = new URLSearchParams(current)
+        if (lastPage > 1) params.set('page', String(lastPage))
+        else params.delete('page')
+        return params
+      },
       { replace: true },
     )
   }, [outOfRange, pages, setSearchParams])
@@ -56,7 +71,12 @@ export default function CreatorProfilePage() {
 
   function goToPage(next: number) {
     pendingFocus.current = true
-    setSearchParams(next > 1 ? { page: String(next) } : new URLSearchParams())
+    setSearchParams((current) => {
+      const params = new URLSearchParams(current)
+      if (next > 1) params.set('page', String(next))
+      else params.delete('page')
+      return params
+    })
   }
 
   function retryLoad() {
@@ -77,13 +97,22 @@ export default function CreatorProfilePage() {
       return (
         <>
           <h1 className="text-2xl break-words">{state.profile.displayName}</h1>
-          <CreatorAdList
-            displayName={state.profile.displayName}
-            ads={state.profile.ads}
-            page={page}
-            onPageChange={goToPage}
-            headingRef={adsHeadingRef}
-          />
+          {isOwnProfile ? (
+            <Tabs
+              label="My profile"
+              items={[
+                { id: 'my-ads', label: 'My ads', content: () => <MyAdsTab /> },
+              ]}
+            />
+          ) : (
+            <CreatorAdList
+              displayName={state.profile.displayName}
+              ads={state.profile.ads}
+              page={page}
+              onPageChange={goToPage}
+              headingRef={adsHeadingRef}
+            />
+          )}
         </>
       )
     }

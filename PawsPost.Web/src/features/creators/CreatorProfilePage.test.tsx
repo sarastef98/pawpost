@@ -29,7 +29,10 @@ function UrlDisplay() {
   return <p>URL: {location.pathname + location.search}</p>
 }
 
-function renderPage(url = '/creators/creator-1', status?: AuthStatus) {
+function renderPage(
+  url = '/creators/creator-1',
+  status: AuthStatus = 'loggedOut',
+) {
   const routes = (
     <MemoryRouter initialEntries={[url]}>
       <Routes>
@@ -47,10 +50,6 @@ function renderPage(url = '/creators/creator-1', status?: AuthStatus) {
       </Routes>
     </MemoryRouter>
   )
-  if (status === undefined) {
-    render(routes)
-    return
-  }
   const value = {
     status,
     user: null,
