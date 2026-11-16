@@ -10,6 +10,7 @@ using PawsPost.Features.Ai.Gemini;
 using PawsPost.Features.Ai.VectorStores;
 using PawsPost.Features.Assistant;
 using PawsPost.Features.Auth;
+using PawsPost.Features.Creators;
 using PawsPost.Features.PetAds;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -56,6 +57,7 @@ builder.Services
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IPetAdService, PetAdService>();
+builder.Services.AddScoped<ICreatorService, CreatorService>();
 // Only Gemini exists. Bound and checked at startup, so an unknown provider name stops the app.
 builder.Services
     .AddOptions<AiOptions>()

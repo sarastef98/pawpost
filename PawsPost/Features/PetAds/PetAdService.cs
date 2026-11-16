@@ -82,6 +82,33 @@ public class PetAdService(
         return new PetAdListResponse(rows.Select(ToListItem).ToList(), totalCount, request.Page, request.PageSize);
     }
 
+    public async Task<PetAdListResponse> ListActiveByOwnerAsync(
+        Guid ownerId, int page, int pageSize, CancellationToken cancellationToken)
+    {
+        var query = dbContext.PetAds
+            .AsNoTracking()
+            .Where(petAd => petAd.OwnerId == ownerId && petAd.Status == PetAdStatus.Active);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        // long math: a huge page number must not overflow the int that Skip takes.
+        var offset = ((long)page - 1) * pageSize;
+        if (offset >= totalCount)
+        {
+            return new PetAdListResponse([], totalCount, page, pageSize);
+        }
+
+        var rows = await query
+            .OrderByDescending(petAd => petAd.CreatedAt)
+            .ThenByDescending(petAd => petAd.Id)
+            .Skip((int)offset)
+            .Take(pageSize)
+            .Select(ListItemSelector)
+            .ToListAsync(cancellationToken);
+
+        return new PetAdListResponse(rows.Select(ToListItem).ToList(), totalCount, page, pageSize);
+    }
+
     public async Task<PetAdDetailsResponse?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
     {
         // Only Active ads are visible, to everyone. A missing ad and a non-Active ad look the same (null).
