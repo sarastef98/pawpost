@@ -1,4 +1,11 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import {
+  configure,
+  getConfig,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {
   MemoryRouter,
@@ -7,7 +14,15 @@ import {
   useLocation,
   useNavigate,
 } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest'
 import type { Mock } from 'vitest'
 import { client } from '../../api/client'
 import Notice from '../../components/Notice'
@@ -483,8 +498,21 @@ describe('PetAdDetailsPage creator', () => {
   )
 })
 
-describe('PetAdDetailsPage close ad', () => {
+// These tests click through the dialog and wait for a navigation or a reload,
+// many awaited steps with real timers. Under load (the full suite in parallel)
+// they can pass the default limits, so the test and the find/waitFor timeouts
+// are larger.
+describe('PetAdDetailsPage close ad', { timeout: 15_000 }, () => {
   const post = client.POST as unknown as Mock
+  const defaultAsyncTimeout = getConfig().asyncUtilTimeout
+
+  beforeAll(() => {
+    configure({ asyncUtilTimeout: 5_000 })
+  })
+
+  afterAll(() => {
+    configure({ asyncUtilTimeout: defaultAsyncTimeout })
+  })
 
   beforeEach(() => {
     get.mockReset()

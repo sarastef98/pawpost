@@ -1,7 +1,22 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import {
+  configure,
+  getConfig,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest'
 import type { Mock } from 'vitest'
 import { client } from '../../api/client'
 import Tabs from '../../components/Tabs'
@@ -301,9 +316,21 @@ describe('MyAdsTab', () => {
   })
 })
 
-describe('MyAdsTab close ad', () => {
+// These tests click through the dialog and wait for a reload, many awaited
+// steps with real timers. Under load (the full suite in parallel) they can pass
+// the default limits, so the test and the find/waitFor timeouts are larger.
+describe('MyAdsTab close ad', { timeout: 15_000 }, () => {
   const post = client.POST as unknown as Mock
   const CLOSED_TEXT = 'Your ad was closed.'
+  const defaultAsyncTimeout = getConfig().asyncUtilTimeout
+
+  beforeAll(() => {
+    configure({ asyncUtilTimeout: 5_000 })
+  })
+
+  afterAll(() => {
+    configure({ asyncUtilTimeout: defaultAsyncTimeout })
+  })
 
   beforeEach(() => {
     get.mockReset()
