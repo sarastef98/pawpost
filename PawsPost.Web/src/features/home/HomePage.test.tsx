@@ -68,6 +68,7 @@ describe('HomePage notice', () => {
       await new Promise((resolve) => setTimeout(resolve, 0))
     })
 
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
     expect(screen.queryByText('Your ad was closed.')).toBeNull()
   })
 })
