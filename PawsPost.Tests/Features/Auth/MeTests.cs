@@ -16,7 +16,7 @@ public class MeTests
         // Arrange
         using var factory = new PawsPostFactory();
         var client = factory.CreateApiClient();
-        var registered = await client.PostAsJsonAsync("/api/auth/register", new { email = "a@x.com", password = AuthTestHelpers.ValidPassword });
+        var registered = await client.PostAsJsonAsync("/api/auth/register", new { displayName = "Anna", email = "a@x.com", password = AuthTestHelpers.ValidPassword });
         var registeredUser = await registered.Content.ReadFromJsonAsync<UserResponse>();
         await client.LoginAsync("a@x.com");
 

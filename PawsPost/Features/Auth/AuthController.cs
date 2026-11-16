@@ -21,6 +21,10 @@ public class AuthController(IAccountService accountService) : ControllerBase
         return result.Outcome switch
         {
             RegisterOutcome.Success => StatusCode(StatusCodes.Status201Created, result.User),
+            RegisterOutcome.DisplayNameTaken => Problem(
+                title: "Display name already taken",
+                detail: "Choose a different display name.",
+                statusCode: StatusCodes.Status409Conflict),
             RegisterOutcome.EmailAlreadyRegistered => Problem(
                 title: "Email already registered", statusCode: StatusCodes.Status409Conflict),
             _ => ValidationProblem(new ValidationProblemDetails(

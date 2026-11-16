@@ -26,7 +26,7 @@ public class RegisterRaceTests
         var client = factory.CreateApiClient();
 
         // Act
-        var response = await client.PostAsJsonAsync("/api/auth/register", new { email = Email, password = AuthTestHelpers.ValidPassword });
+        var response = await client.PostAsJsonAsync("/api/auth/register", new { displayName = "Anna", email = Email, password = AuthTestHelpers.ValidPassword });
 
         // Assert
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
@@ -46,7 +46,7 @@ public class RegisterRaceTests
         var client = factory.CreateApiClient();
 
         // Act
-        var response = await client.PostAsJsonAsync("/api/auth/register", new { email = Email, password = AuthTestHelpers.ValidPassword });
+        var response = await client.PostAsJsonAsync("/api/auth/register", new { displayName = "Anna", email = Email, password = AuthTestHelpers.ValidPassword });
 
         // Assert
         // The email does not exist, so the error is not a duplicate and must not be hidden behind a 409.

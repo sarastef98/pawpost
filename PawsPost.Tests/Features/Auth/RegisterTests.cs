@@ -20,7 +20,7 @@ public class RegisterTests
         var client = factory.CreateApiClient();
 
         // Act
-        var response = await client.PostAsJsonAsync("/api/auth/register", new { email = "a@x.com", password = ValidPassword });
+        var response = await client.PostAsJsonAsync("/api/auth/register", new { displayName = "Anna", email = "a@x.com", password = ValidPassword });
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -38,7 +38,7 @@ public class RegisterTests
         var client = factory.CreateApiClient();
 
         // Act
-        await client.PostAsJsonAsync("/api/auth/register", new { email = "a@x.com", password = ValidPassword });
+        await client.PostAsJsonAsync("/api/auth/register", new { displayName = "Anna", email = "a@x.com", password = ValidPassword });
 
         // Assert
         using var scope = factory.Services.CreateScope();
@@ -56,7 +56,7 @@ public class RegisterTests
         var client = factory.CreateApiClient();
 
         // Act
-        var response = await client.PostAsJsonAsync("/api/auth/register", new { email = "a@x.com", password = ValidPassword });
+        var response = await client.PostAsJsonAsync("/api/auth/register", new { displayName = "Anna", email = "a@x.com", password = ValidPassword });
 
         // Assert
         var text = await response.Content.ReadAsStringAsync();
@@ -71,10 +71,10 @@ public class RegisterTests
         // Arrange
         using var factory = new PawsPostFactory();
         var client = factory.CreateApiClient();
-        await client.PostAsJsonAsync("/api/auth/register", new { email = "A@x.com", password = ValidPassword });
+        await client.PostAsJsonAsync("/api/auth/register", new { displayName = "Anna", email = "A@x.com", password = ValidPassword });
 
         // Act
-        var response = await client.PostAsJsonAsync("/api/auth/register", new { email = "a@x.com", password = ValidPassword });
+        var response = await client.PostAsJsonAsync("/api/auth/register", new { displayName = "Anna", email = "a@x.com", password = ValidPassword });
 
         // Assert
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
@@ -88,7 +88,7 @@ public class RegisterTests
         var client = factory.CreateApiClient();
 
         // Act
-        var response = await client.PostAsJsonAsync("/api/auth/register", new { email = "a@x.com", password = "Abcdef1!" });
+        var response = await client.PostAsJsonAsync("/api/auth/register", new { displayName = "Anna", email = "a@x.com", password = "Abcdef1!" });
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -100,10 +100,10 @@ public class RegisterTests
         // Arrange
         using var factory = new PawsPostFactory();
         var client = factory.CreateApiClient();
-        await client.PostAsJsonAsync("/api/auth/register", new { email = "a@x.com", password = ValidPassword });
+        await client.PostAsJsonAsync("/api/auth/register", new { displayName = "Anna", email = "a@x.com", password = ValidPassword });
 
         // Act
-        var response = await client.PostAsJsonAsync("/api/auth/register", new { email = "a@x.com", password = ValidPassword });
+        var response = await client.PostAsJsonAsync("/api/auth/register", new { displayName = "Anna", email = "a@x.com", password = ValidPassword });
 
         // Assert
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
@@ -129,7 +129,7 @@ public class RegisterTests
         var client = factory.CreateApiClient();
 
         // Act
-        var response = await client.PostAsJsonAsync("/api/auth/register", new { email, password });
+        var response = await client.PostAsJsonAsync("/api/auth/register", new { displayName = "Anna", email, password });
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -148,7 +148,7 @@ public class RegisterTests
         var client = factory.CreateApiClient();
 
         // Act
-        var response = await client.PostAsJsonAsync("/api/auth/register", new { email = "a@x.com", password });
+        var response = await client.PostAsJsonAsync("/api/auth/register", new { displayName = "Anna", email = "a@x.com", password });
 
         // Assert
         var body = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ValidationProblemDetails>();
@@ -165,7 +165,7 @@ public class RegisterTests
         var email = new string('a', 250) + "@x.com";
 
         // Act
-        var response = await client.PostAsJsonAsync("/api/auth/register", new { email, password = ValidPassword });
+        var response = await client.PostAsJsonAsync("/api/auth/register", new { displayName = "Anna", email, password = ValidPassword });
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -180,7 +180,7 @@ public class RegisterTests
         var password = "Aa1!" + new string('x', 125);
 
         // Act
-        var response = await client.PostAsJsonAsync("/api/auth/register", new { email = "a@x.com", password });
+        var response = await client.PostAsJsonAsync("/api/auth/register", new { displayName = "Anna", email = "a@x.com", password });
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -194,7 +194,7 @@ public class RegisterTests
         var client = factory.CreateApiClient();
 
         // Act
-        var response = await client.PostAsJsonAsync("/api/auth/register", new { email = "  a@x.com  ", password = ValidPassword });
+        var response = await client.PostAsJsonAsync("/api/auth/register", new { displayName = "Anna", email = "  a@x.com  ", password = ValidPassword });
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -211,7 +211,7 @@ public class RegisterTests
         // Arrange
         using var factory = new PawsPostFactory();
         var client = factory.CreateApiClient();
-        using var content = new StringContent("email=a@x.com&password=Passw0rd!", Encoding.UTF8, "application/x-www-form-urlencoded");
+        using var content = new StringContent("email=a@x.com&password=Passw0rd!&displayName=Anna", Encoding.UTF8, "application/x-www-form-urlencoded");
 
         // Act
         var response = await client.PostAsync("/api/auth/register", content);
