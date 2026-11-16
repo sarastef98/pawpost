@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
+import AssistantPage from './features/assistant/AssistantPage'
 import LoginPage from './features/auth/LoginPage'
 import RegisterPage from './features/auth/RegisterPage'
 import HomePage from './features/home/HomePage'
@@ -17,6 +18,7 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/pet-ads/new" element={<CreatePetAdPage />} />
         <Route path="/pet-ads/:id" element={<PetAdDetailsPage />} />
+        <Route path="/assistant" element={<AssistantPage />} />
         <Route path="/styleguide" element={<StyleGuidePage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

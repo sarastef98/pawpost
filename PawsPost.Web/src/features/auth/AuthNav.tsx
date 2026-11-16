@@ -53,6 +53,9 @@ export default function AuthNav() {
           {LOGOUT_FAILED_MESSAGE}
         </p>
       )}
+      <Link to="/assistant" className={linkClasses}>
+        Ask the assistant
+      </Link>
       <Link to="/pet-ads/new" className={linkClasses}>
         Post an ad
       </Link>

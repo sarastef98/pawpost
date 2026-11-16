@@ -30,6 +30,7 @@ function renderHeader(url = '/') {
             <Route path="/" element={<p>Home page</p>} />
             <Route path="/other" element={<p>Other page</p>} />
             <Route path="/pet-ads/new" element={<p>Post page</p>} />
+            <Route path="/assistant" element={<p>Assistant page</p>} />
             <Route path="/login" element={<p>Login page</p>} />
             <Route path="/register" element={<p>Register page</p>} />
           </Route>
@@ -200,6 +201,10 @@ describe('AuthNav', () => {
     await user.tab()
     expect(screen.getByRole('link', { name: 'PawsPost' })).toHaveFocus()
     await user.tab()
+    expect(
+      screen.getByRole('link', { name: 'Ask the assistant' }),
+    ).toHaveFocus()
+    await user.tab()
     expect(screen.getByRole('link', { name: 'Post an ad' })).toHaveFocus()
     await user.tab()
 
@@ -267,5 +272,46 @@ describe('AuthNav post an ad link', () => {
     renderHeader()
 
     expect(screen.queryByRole('link', { name: 'Post an ad' })).toBeNull()
+  })
+})
+
+describe('AuthNav assistant link', () => {
+  it('links to the assistant page when logged in', async () => {
+    get.mockResolvedValue(okResult(testUser))
+
+    renderHeader()
+
+    expect(
+      await screen.findByRole('link', { name: 'Ask the assistant' }),
+    ).toHaveAttribute('href', '/assistant')
+  })
+
+  it('opens the assistant page when clicked', async () => {
+    const user = userEvent.setup()
+    get.mockResolvedValue(okResult(testUser))
+    renderHeader()
+
+    await user.click(
+      await screen.findByRole('link', { name: 'Ask the assistant' }),
+    )
+
+    expect(screen.getByText('Assistant page')).toBeInTheDocument()
+  })
+
+  it('is not shown when logged out', async () => {
+    get.mockResolvedValue(failResult(401))
+
+    renderHeader()
+
+    await screen.findByRole('link', { name: 'Log in' })
+    expect(screen.queryByRole('link', { name: 'Ask the assistant' })).toBeNull()
+  })
+
+  it('is not shown while the start check runs', () => {
+    get.mockReturnValue(new Promise(() => {}))
+
+    renderHeader()
+
+    expect(screen.queryByRole('link', { name: 'Ask the assistant' })).toBeNull()
   })
 })
