@@ -8,6 +8,9 @@ public class FakeVectorStore : IVectorStore
     private readonly object _lock = new();
     private readonly Dictionary<Guid, (float[] Vector, string Model)> _vectors = [];
 
+    /// <summary>When set, <see cref="UpsertAsync"/> throws it, to simulate a storage failure.</summary>
+    public Exception? UpsertExceptionToThrow { get; set; }
+
     public bool Contains(Guid petAdId)
     {
         lock (_lock)
@@ -18,6 +21,11 @@ public class FakeVectorStore : IVectorStore
 
     public Task UpsertAsync(Guid petAdId, float[] vector, string model, CancellationToken cancellationToken)
     {
+        if (UpsertExceptionToThrow is not null)
+        {
+            throw UpsertExceptionToThrow;
+        }
+
         lock (_lock)
         {
             _vectors[petAdId] = (vector, model);

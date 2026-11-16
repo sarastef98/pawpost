@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
 using PawsPost.Features.Ai;
 using PawsPost.Features.Assistant;
 using PawsPost.Features.PetAds;
@@ -104,6 +105,21 @@ public class CreatePetAdEmbeddingTests
         var stored = Assert.Single(await factory.GetStoredAdsAsync());
         Assert.Equal(ad!.Id, stored.Id);
         Assert.False(factory.VectorStore.Contains(ad.Id));
+    }
+
+    [Fact]
+    public async Task CreatePetAd_VectorStorageFails_IsNotSwallowed()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("a@x.com");
+        factory.VectorStore.UpsertExceptionToThrow = new DbUpdateException("storage failed");
+
+        // Act
+        var response = await client.PostPetAdAsync(ValidAdoptionBody());
+
+        // Assert
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
     }
 
     [Fact]

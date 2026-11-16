@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PawsPost.Data;
+using PawsPost.Features.Ai;
 using PawsPost.Features.Assistant;
 
 namespace PawsPost.Features.PetAds;
@@ -129,7 +130,8 @@ public class PetAdService(
             row.Price, row.Location, row.Status, DateTime.SpecifyKind(row.CreatedAt, DateTimeKind.Utc));
     }
 
-    // The ad is already saved. If embedding fails, the ad stays and is just not searchable yet.
+    // The ad is already saved. If the AI provider fails, the ad stays and is just not searchable yet.
+    // Only provider failures are caught here. A storage (database) failure is unexpected and is not hidden.
     // Only the ad id and the exception type are logged, never ad text or provider details.
     private async Task TryIndexAsync(PetAd ad, CancellationToken cancellationToken)
     {
@@ -140,7 +142,7 @@ public class PetAdService(
                     ad.Id, ad.Title, ad.Type, ad.Species, ad.Breed, ad.AgeInMonths, ad.Description, ad.Location),
                 cancellationToken);
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (AiProviderException exception)
         {
             logger.LogWarning(
                 "Could not embed pet ad {PetAdId} ({ExceptionType}). It is not searchable yet.",
