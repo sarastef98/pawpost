@@ -85,6 +85,20 @@ public static class PetAdTestHelpers
         return await db.PetAds.AsNoTracking().SingleOrDefaultAsync(petAd => petAd.Id == id);
     }
 
+    /// <summary>Registers and logs in a user, then seeds one ad owned by that user (default Active, fixed date).</summary>
+    public static async Task<(HttpClient Client, Guid OwnerId, PetAd Ad)> CreateLoggedInOwnerWithAdAsync(
+        this WebApplicationFactory<Program> factory,
+        string email,
+        PetAdStatus status = PetAdStatus.Active,
+        string? displayName = null)
+    {
+        var client = await factory.CreateLoggedInClientAsync(email, displayName);
+        var ownerId = await client.GetMyIdAsync();
+        var ad = BuildPetAd(ownerId, new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc), status: status);
+        await factory.SeedAdsAsync(ad);
+        return (client, ownerId, ad);
+    }
+
     public static Task<HttpResponseMessage> GetPetAdsAsync(this HttpClient client, string? query = null)
     {
         return client.GetAsync(string.IsNullOrEmpty(query) ? PetAdsUrl : $"{PetAdsUrl}?{query}");
