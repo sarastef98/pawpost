@@ -5,7 +5,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using PawsPost.Data;
+using PawsPost.Features.Assistant;
 using PawsPost.Tests.Infrastructure;
+using static PawsPost.Tests.Infrastructure.AssistantTestHelpers;
 using static PawsPost.Tests.Infrastructure.PetAdTestHelpers;
 
 namespace PawsPost.Tests.Features.PetAds;
@@ -491,6 +493,147 @@ public class ListMyClosedPetAdsTests
             Assert.DoesNotContain(displayName, message, StringComparison.OrdinalIgnoreCase);
         });
     }
+
+    // Closing through the close endpoint and visibility elsewhere
+
+    [Fact]
+    public async Task ListMyClosedPetAds_AdClosedThroughEndpoint_AppearsInClosedList()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var (client, _, ad) = await factory.CreateLoggedInOwnerWithAdAsync("owner@x.com");
+        await client.ClosePetAdAsync(ad.Id.ToString());
+
+        // Act
+        var response = await client.GetMyClosedPetAdsAsync();
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = await ReadJsonAsync(response);
+        Assert.Equal([ad.Id], ItemIds(json));
+        Assert.Equal(1, json.RootElement.GetProperty("totalCount").GetInt32());
+    }
+
+    [Fact]
+    public async Task ListMyClosedPetAds_AdClosedThroughEndpoint_DisappearsFromMyAds()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var (client, ownerId, ad) = await factory.CreateLoggedInOwnerWithAdAsync("owner@x.com");
+        var stillActive = BuildPetAd(ownerId, Day1.AddDays(1), title: "Still active");
+        await factory.SeedAdsAsync(stillActive);
+        await client.ClosePetAdAsync(ad.Id.ToString());
+
+        // Act
+        var response = await client.GetMyPetAdsAsync();
+
+        // Assert
+        using var json = await ReadJsonAsync(response);
+        Assert.Equal([stillActive.Id], ItemIds(json));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("species=Dog")]
+    [InlineData("type=Adoption")]
+    [InlineData("species=Dog&type=Adoption")]
+    public async Task ListMyClosedPetAds_ClosedAd_IsNotInPublicList(string query)
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var (client, _, ad) = await factory.CreateLoggedInOwnerWithAdAsync("owner@x.com");
+        await client.ClosePetAdAsync(ad.Id.ToString());
+
+        // Act
+        var response = await factory.CreateApiClient().GetPetAdsAsync(query);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = await ReadJsonAsync(response);
+        Assert.Empty(ItemIds(json));
+        Assert.Equal(0, json.RootElement.GetProperty("totalCount").GetInt32());
+    }
+
+    [Fact]
+    public async Task ListMyClosedPetAds_ClosedAd_DetailsReturn404ForOwner()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var (client, _, ad) = await factory.CreateLoggedInOwnerWithAdAsync("owner@x.com");
+        await client.ClosePetAdAsync(ad.Id.ToString());
+
+        // Act
+        var response = await client.GetPetAdAsync(ad.Id.ToString());
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ListMyClosedPetAds_ClosedAd_DetailsReturn404ForOtherUser()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var (client, _, ad) = await factory.CreateLoggedInOwnerWithAdAsync("owner@x.com");
+        await client.ClosePetAdAsync(ad.Id.ToString());
+        var other = await factory.CreateLoggedInClientAsync("other@x.com", "Boris");
+
+        // Act
+        var response = await other.GetPetAdAsync(ad.Id.ToString());
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ListMyClosedPetAds_ClosedAd_IsNotInCreatorProfile()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var (client, ownerId, ad) = await factory.CreateLoggedInOwnerWithAdAsync("owner@x.com");
+        await client.ClosePetAdAsync(ad.Id.ToString());
+
+        // Act
+        var anonymous = await factory.CreateApiClient().GetCreatorAsync(ownerId.ToString());
+        var asOwner = await client.GetCreatorAsync(ownerId.ToString());
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, anonymous.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, asOwner.StatusCode);
+        using var anonymousJson = await ReadJsonAsync(anonymous);
+        using var ownerJson = await ReadJsonAsync(asOwner);
+        Assert.Empty(ItemIds(anonymousJson.RootElement.GetProperty("ads")));
+        Assert.Empty(ItemIds(ownerJson.RootElement.GetProperty("ads")));
+    }
+
+    [Fact]
+    public async Task ListMyClosedPetAds_ClosedAd_IsNotReturnedByAssistantSearch()
+    {
+        // Arrange
+        using var factory = new PawsPostFactory();
+        var client = await factory.CreateLoggedInClientAsync("owner@x.com", "Anna K");
+        var ad = BuildSearchAd(await client.GetMyIdAsync(), "Calm dog", description: "Calm and quiet.");
+        await factory.SeedAndIndexAdsAsync(ad);
+        Assert.Contains(ad.Id, await SearchIdsAsync(client));
+        await client.ClosePetAdAsync(ad.Id.ToString());
+
+        // Act
+        var ids = await SearchIdsAsync(client);
+
+        // Assert
+        Assert.DoesNotContain(ad.Id, ids);
+    }
+
+    private static async Task<List<Guid>> SearchIdsAsync(HttpClient client)
+    {
+        var response = await client.PostAssistantSearchAsync(new { question = "a calm dog" });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<AssistantSearchResponse>();
+        return body!.Ads.Select(ad => ad.Id).ToList();
+    }
+
+    private static List<Guid> ItemIds(JsonElement list) =>
+        list.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("id").GetGuid()).ToList();
 
     private static PetAd[] SeedClosedAds(Guid ownerId, int count)
     {
