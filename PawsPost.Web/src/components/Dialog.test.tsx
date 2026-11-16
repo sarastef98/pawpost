@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useRef, useState } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import Dialog from './Dialog'
 
 type HarnessProps = {
@@ -55,6 +55,14 @@ async function openDialog(props: HarnessProps = {}) {
 }
 
 describe('Dialog', () => {
+  // Reset the scroll style even when a test fails before its own cleanup, so
+  // the value never leaks into later tests. Unmount first: an open dialog
+  // restores the old value when it unmounts.
+  afterEach(() => {
+    cleanup()
+    document.body.style.overflow = ''
+  })
+
   it('renders a modal dialog named by its title and described by its text', async () => {
     await openDialog()
 
@@ -139,7 +147,6 @@ describe('Dialog', () => {
     await user.keyboard('{Escape}')
 
     expect(document.body.style.overflow).toBe('auto')
-    document.body.style.overflow = ''
   })
 
   it('does not close when the backdrop is clicked', async () => {
