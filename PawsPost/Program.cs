@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using PawsPost.Common;
 using PawsPost.Data;
 using PawsPost.Features.Ai;
+using PawsPost.Features.Ai.Gemini;
 using PawsPost.Features.Ai.VectorStores;
 using PawsPost.Features.Assistant;
 using PawsPost.Features.Auth;
@@ -55,6 +56,17 @@ builder.Services
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IPetAdService, PetAdService>();
+// Only Gemini exists. An unknown provider name stops the app at startup.
+var aiProvider = builder.Configuration[$"{AiOptions.SectionName}:{nameof(AiOptions.Provider)}"] ?? AiOptions.GeminiProvider;
+if (aiProvider == AiOptions.GeminiProvider)
+{
+    builder.Services.AddGeminiProviders(builder.Configuration);
+}
+else
+{
+    throw new InvalidOperationException($"Unknown Ai:Provider \"{aiProvider}\".");
+}
+
 builder.Services.AddScoped<IVectorStore, SqliteVectorStore>();
 builder.Services.AddScoped<IPetAdSearchIndexer, PetAdSearchIndexer>();
 
