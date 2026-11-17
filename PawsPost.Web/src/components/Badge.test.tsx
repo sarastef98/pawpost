@@ -14,4 +14,10 @@ describe('Badge', () => {
 
     expect(screen.getByText('Sale')).toBeInTheDocument()
   })
+
+  it('shows the Closed label for the closed variant', () => {
+    render(<Badge variant="closed" />)
+
+    expect(screen.getByText('Closed')).toBeInTheDocument()
+  })
 })
