@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  parseClosedAdsPage,
   parseMyAdsPage,
   parseProfilePage,
   toCreatorProfile,
@@ -138,5 +139,41 @@ describe('parseMyAdsPage', () => {
 
   it('reads its own key when both keys are present', () => {
     expect(parseMyAdsPage(new URLSearchParams('page=4&myAdsPage=2'))).toBe(2)
+  })
+})
+
+describe('parseClosedAdsPage', () => {
+  it.each([
+    ['closedAdsPage=1', 1],
+    ['closedAdsPage=2', 2],
+    ['closedAdsPage=15', 15],
+  ])('accepts %s', (search, expected) => {
+    expect(parseClosedAdsPage(new URLSearchParams(search))).toBe(expected)
+  })
+
+  it.each([
+    '',
+    'closedAdsPage=0',
+    'closedAdsPage=-3',
+    'closedAdsPage=abc',
+    'closedAdsPage=1.5',
+    'closedAdsPage=',
+    'closedAdsPage=99999999999999999999',
+  ])('falls back to page 1 for "%s"', (search) => {
+    expect(parseClosedAdsPage(new URLSearchParams(search))).toBe(1)
+  })
+
+  it('ignores the public page and My ads page keys', () => {
+    expect(parseClosedAdsPage(new URLSearchParams('page=4&myAdsPage=3'))).toBe(
+      1,
+    )
+  })
+
+  it('reads its own key when the other keys are present', () => {
+    expect(
+      parseClosedAdsPage(
+        new URLSearchParams('page=4&myAdsPage=3&closedAdsPage=2'),
+      ),
+    ).toBe(2)
   })
 })
