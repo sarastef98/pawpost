@@ -38,3 +38,15 @@ export function parseMyAdsPage(params: URLSearchParams): number {
       : new URLSearchParams({ page: value }),
   ).page
 }
+
+// Reads the "Closed ads" tab page from its own URL key, so it never mixes with
+// `page` or `myAdsPage`. Same rules: anything that is not a positive whole
+// number gives page 1.
+export function parseClosedAdsPage(params: URLSearchParams): number {
+  const value = params.get('closedAdsPage')
+  return parseListQuery(
+    value === null
+      ? new URLSearchParams()
+      : new URLSearchParams({ page: value }),
+  ).page
+}
