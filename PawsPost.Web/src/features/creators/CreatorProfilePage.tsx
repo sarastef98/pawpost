@@ -6,6 +6,7 @@ import Spinner from '../../components/Spinner'
 import { totalPages } from '../petAds/petAdListQuery'
 import Tabs from '../../components/Tabs'
 import { useAuth } from '../auth/useAuth'
+import ClosedAdsTab from './ClosedAdsTab'
 import CreatorAdList from './CreatorAdList'
 import MyAdsTab from './MyAdsTab'
 import { parseProfilePage } from './creatorProfileData'
@@ -102,6 +103,11 @@ export default function CreatorProfilePage() {
               label="My profile"
               items={[
                 { id: 'my-ads', label: 'My ads', content: () => <MyAdsTab /> },
+                {
+                  id: 'closed-ads',
+                  label: 'Closed ads',
+                  content: () => <ClosedAdsTab />,
+                },
               ]}
             />
           ) : (

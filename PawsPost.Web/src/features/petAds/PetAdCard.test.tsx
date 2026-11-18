@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import PetAdCard from './PetAdCard'
 import type { PetAdSummary } from './petAdListQuery'
 
-function renderCard(overrides: Partial<PetAdSummary> = {}) {
+function renderCard(overrides: Partial<PetAdSummary> = {}, closed?: boolean) {
   const ad: PetAdSummary = {
     id: 'ad-1',
     title: 'Friendly Rex',
@@ -16,7 +16,7 @@ function renderCard(overrides: Partial<PetAdSummary> = {}) {
   }
   render(
     <MemoryRouter>
-      <PetAdCard ad={ad} />
+      <PetAdCard ad={ad} closed={closed} />
     </MemoryRouter>,
   )
 }
@@ -86,6 +86,41 @@ describe('PetAdCard', () => {
       'href',
       '/pet-ads/ad-42',
     )
+  })
+})
+
+describe('PetAdCard closed', () => {
+  it('shows the title, type badge, price and location like a normal card', () => {
+    renderCard({ type: 'Sale', price: 150.5 }, true)
+
+    expect(
+      screen.getByRole('heading', { level: 3, name: 'Friendly Rex' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Sale')).toBeInTheDocument()
+    expect(screen.getByText('€150.50')).toBeInTheDocument()
+    expect(screen.getByText('Skopje')).toBeInTheDocument()
+  })
+
+  it('shows a Closed badge', () => {
+    renderCard({}, true)
+
+    expect(screen.getByText('Closed')).toBeInTheDocument()
+  })
+
+  it('has no link', () => {
+    renderCard({}, true)
+
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+  })
+
+  it('still links to the ad details and shows no Closed badge when not closed', () => {
+    renderCard({ id: 'ad-9' })
+
+    expect(screen.getByRole('link', { name: /Friendly Rex/ })).toHaveAttribute(
+      'href',
+      '/pet-ads/ad-9',
+    )
+    expect(screen.queryByText('Closed')).not.toBeInTheDocument()
   })
 })
 

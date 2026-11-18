@@ -1,4 +1,4 @@
-type BadgeVariant = 'adoption' | 'sale'
+type BadgeVariant = 'adoption' | 'sale' | 'closed'
 
 type BadgeProps = {
   variant: BadgeVariant
@@ -7,6 +7,7 @@ type BadgeProps = {
 const variants: Record<BadgeVariant, { label: string; classes: string }> = {
   adoption: { label: 'Adoption', classes: 'bg-success text-surface' },
   sale: { label: 'Sale', classes: 'bg-primary-soft text-primary-hover' },
+  closed: { label: 'Closed', classes: 'bg-border text-text' },
 }
 
 export default function Badge({ variant }: BadgeProps) {

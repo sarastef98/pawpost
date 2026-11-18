@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -458,7 +458,7 @@ describe('CreatorProfilePage', () => {
       expect(
         screen.getByRole('tablist', { name: 'My profile' }),
       ).toBeInTheDocument()
-      expect(screen.getAllByRole('tab')).toHaveLength(1)
+      expect(screen.getAllByRole('tab')).toHaveLength(2)
       expect(screen.getByRole('tab', { name: 'My ads' })).toHaveAttribute(
         'aria-selected',
         'true',
@@ -633,21 +633,239 @@ describe('CreatorProfilePage', () => {
       )
       expect(publicCall?.[1].params.query).toEqual({ page: 2, pageSize: 20 })
     })
+  })
 
-    it('keeps focus on the single tab when Home and End are pressed', async () => {
+  describe('closed ads tab', () => {
+    const owner = { id: 'creator-1', email: testUser.email }
+    const CLOSED_URL = '/api/pet-ads/mine/closed'
+
+    function listResult(titles: string[]) {
+      return okResult({
+        items: titles.map((title, i) =>
+          sampleListItem({ id: `${title}-${i}`, title }),
+        ),
+        totalCount: titles.length,
+        page: 1,
+        pageSize: 20,
+      })
+    }
+
+    // Answers the public profile, /mine and /mine/closed by URL. `closed` is
+    // a list of results, one per request; the last one repeats.
+    function answer(closed: unknown[] = [listResult([])]) {
+      let closedCalls = 0
+      get.mockImplementation((url: string) => {
+        if (url === '/api/pet-ads/mine') {
+          return Promise.resolve(listResult(['Mine 1']))
+        }
+        if (url === CLOSED_URL) {
+          const result = closed[Math.min(closedCalls, closed.length - 1)]
+          closedCalls += 1
+          return Promise.resolve(result)
+        }
+        return Promise.resolve(okResult(creatorProfileBody('Anna', ads(2))))
+      })
+    }
+
+    function closedCalls() {
+      return get.mock.calls.filter(([url]) => url === CLOSED_URL)
+    }
+
+    it('shows the tabs My ads and Closed ads on the own profile, with My ads selected', async () => {
+      answer()
+      renderPage('/creators/creator-1', 'loggedIn', owner)
+
+      await screen.findByText('Mine 1')
+
+      const tabs = screen.getAllByRole('tab')
+      expect(tabs.map((tab) => tab.textContent)).toEqual([
+        'My ads',
+        'Closed ads',
+      ])
+      expect(screen.getByRole('tab', { name: 'My ads' })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      )
+      expect(screen.getByRole('tab', { name: 'Closed ads' })).toHaveAttribute(
+        'aria-selected',
+        'false',
+      )
+    })
+
+    it('recognises the own profile when the ids differ only in letter case', async () => {
       const user = userEvent.setup()
-      answer(myAds(1))
+      answer([listResult(['Old Rex'])])
+      renderPage('/creators/CREATOR-1', 'loggedIn', owner)
+
+      await user.click(await screen.findByRole('tab', { name: 'Closed ads' }))
+
+      expect(await screen.findByText('Old Rex')).toBeInTheDocument()
+    })
+
+    it('does not request the closed ads before the Closed ads tab is opened', async () => {
+      answer()
+      renderPage('/creators/creator-1', 'loggedIn', owner)
+
+      await screen.findByText('Mine 1')
+
+      expect(closedCalls()).toHaveLength(0)
+    })
+
+    it('requests the closed ads and shows them in the tab panel when Closed ads is opened', async () => {
+      const user = userEvent.setup()
+      answer([listResult(['Old Rex', 'Old Mia'])])
+      renderPage('/creators/creator-1', 'loggedIn', owner)
+
+      await user.click(await screen.findByRole('tab', { name: 'Closed ads' }))
+
+      expect(await screen.findByText('Old Rex')).toBeInTheDocument()
+      expect(screen.getByText('Old Mia')).toBeInTheDocument()
+      expect(closedCalls()).toHaveLength(1)
+      expect(closedCalls()[0][1].params.query).toEqual({
+        page: 1,
+        pageSize: 20,
+      })
+      expect(screen.getByRole('tabpanel')).toHaveTextContent('Old Rex')
+      expect(screen.queryByText('Mine 1')).toBeNull()
+    })
+
+    it('shows no tabs on another user profile and never requests the closed ads', async () => {
+      answer()
+      renderPage('/creators/creator-1', 'loggedIn', {
+        id: 'someone-else',
+        email: 'other@example.com',
+      })
+
+      expect(await screen.findByText('Ad 1')).toBeInTheDocument()
+
+      expect(screen.queryByRole('tab')).toBeNull()
+      expect(closedCalls()).toHaveLength(0)
+    })
+
+    it('shows no tabs for a visitor, never requests the closed ads and does not redirect to login', async () => {
+      answer()
+      renderPage('/creators/creator-1', 'loggedOut')
+
+      expect(await screen.findByText('Ad 1')).toBeInTheDocument()
+
+      expect(screen.queryByRole('tab')).toBeNull()
+      expect(closedCalls()).toHaveLength(0)
+      expect(screen.queryByRole('heading', { name: 'Login probe' })).toBeNull()
+    })
+
+    it(
+      'requests the closed list again and shows the ad after it was closed in My ads',
+      { timeout: 15_000 },
+      async () => {
+        const user = userEvent.setup()
+        const post = client.POST as unknown as Mock
+        post.mockReset()
+        post.mockResolvedValue({
+          data: undefined,
+          error: undefined,
+          response: { status: 204, ok: true },
+        })
+        answer([listResult([]), listResult(['Mine 1'])])
+        renderPage('/creators/creator-1', 'loggedIn', owner)
+        await user.click(await screen.findByRole('tab', { name: 'Closed ads' }))
+        expect(
+          await screen.findByText('You have no closed ads.'),
+        ).toBeInTheDocument()
+        await user.click(screen.getByRole('tab', { name: 'My ads' }))
+        await user.click(
+          await screen.findByRole('button', { name: 'Close ad: Mine 1' }),
+        )
+        const dialog = await screen.findByRole('dialog')
+        await user.click(
+          within(dialog).getByRole('button', { name: 'Close ad' }),
+        )
+        await screen.findByText('Your ad was closed.')
+
+        await user.click(screen.getByRole('tab', { name: 'Closed ads' }))
+
+        await waitFor(() => expect(closedCalls()).toHaveLength(2))
+        const panel = screen.getByRole('tabpanel')
+        expect(await within(panel).findByText('Closed')).toBeInTheDocument()
+        expect(within(panel).getByText('Mine 1')).toBeInTheDocument()
+        expect(within(panel).queryByText('You have no closed ads.')).toBeNull()
+      },
+    )
+
+    it('has two tabs in a tablist, with aria-selected following the selection', async () => {
+      const user = userEvent.setup()
+      answer()
       renderPage('/creators/creator-1', 'loggedIn', owner)
       await screen.findByText('Mine 1')
-      const tab = screen.getByRole('tab', { name: 'My ads' })
-      tab.focus()
+      const list = screen.getByRole('tablist', { name: 'My profile' })
+      expect(within(list).getAllByRole('tab')).toHaveLength(2)
 
-      await user.keyboard('{Home}')
-      expect(tab).toHaveFocus()
+      await user.click(screen.getByRole('tab', { name: 'Closed ads' }))
+
+      expect(screen.getByRole('tab', { name: 'Closed ads' })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      )
+      expect(screen.getByRole('tab', { name: 'My ads' })).toHaveAttribute(
+        'aria-selected',
+        'false',
+      )
+    })
+
+    it('links each tab to its panel and labels the panel by its tab', async () => {
+      const user = userEvent.setup()
+      answer()
+      renderPage('/creators/creator-1', 'loggedIn', owner)
+      await screen.findByText('Mine 1')
+      const myAdsTab = screen.getByRole('tab', { name: 'My ads' })
+      const closedTab = screen.getByRole('tab', { name: 'Closed ads' })
+      const myAdsPanel = screen.getByRole('tabpanel')
+      expect(myAdsTab.getAttribute('aria-controls')).toBe(myAdsPanel.id)
+      expect(myAdsPanel.getAttribute('aria-labelledby')).toBe(myAdsTab.id)
+
+      await user.click(closedTab)
+
+      const closedPanel = screen.getByRole('tabpanel')
+      expect(closedTab.getAttribute('aria-controls')).toBe(closedPanel.id)
+      expect(closedPanel.getAttribute('aria-labelledby')).toBe(closedTab.id)
+      expect(closedPanel.id).not.toBe(myAdsPanel.id)
+    })
+
+    it('moves between the two tabs with ArrowRight and ArrowLeft and wraps', async () => {
+      const user = userEvent.setup()
+      answer()
+      renderPage('/creators/creator-1', 'loggedIn', owner)
+      await screen.findByText('Mine 1')
+      const myAdsTab = screen.getByRole('tab', { name: 'My ads' })
+      const closedTab = screen.getByRole('tab', { name: 'Closed ads' })
+      myAdsTab.focus()
+
+      await user.keyboard('{ArrowRight}')
+      expect(closedTab).toHaveFocus()
+      expect(closedTab).toHaveAttribute('aria-selected', 'true')
+      await user.keyboard('{ArrowRight}')
+      expect(myAdsTab).toHaveFocus()
+      expect(myAdsTab).toHaveAttribute('aria-selected', 'true')
+      await user.keyboard('{ArrowLeft}')
+      expect(closedTab).toHaveFocus()
+      expect(closedTab).toHaveAttribute('aria-selected', 'true')
+    })
+
+    it('selects My ads with Home and Closed ads with End and moves focus with the selection', async () => {
+      const user = userEvent.setup()
+      answer()
+      renderPage('/creators/creator-1', 'loggedIn', owner)
+      await screen.findByText('Mine 1')
+      const myAdsTab = screen.getByRole('tab', { name: 'My ads' })
+      const closedTab = screen.getByRole('tab', { name: 'Closed ads' })
+      myAdsTab.focus()
+
       await user.keyboard('{End}')
+      expect(closedTab).toHaveFocus()
+      expect(closedTab).toHaveAttribute('aria-selected', 'true')
+      await user.keyboard('{Home}')
 
-      expect(tab).toHaveFocus()
-      expect(tab).toHaveAttribute('aria-selected', 'true')
+      expect(myAdsTab).toHaveFocus()
+      expect(myAdsTab).toHaveAttribute('aria-selected', 'true')
     })
   })
 })
