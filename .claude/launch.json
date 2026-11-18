@@ -8,9 +8,10 @@
       "port": 5280
     },
     {
-      "name": "web-running",
-      "port": 5173,
-      "url": "http://localhost:5173"
+      "name": "web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "PawsPost.Web"],
+      "port": 5173
     }
   ]
 }

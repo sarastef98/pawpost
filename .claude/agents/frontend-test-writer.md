@@ -17,6 +17,15 @@ You write frontend tests for PawsPost in `PawsPost.Web`. Read `CLAUDE.md` first,
 6. Run `npm test` inside `PawsPost.Web`. All tests must pass.
 7. Run `npm run format`, `npm run lint`, then commit with the message format `test: summary (#issue)`.
 
+## Loop
+
+Act, check, retry, with a limit:
+
+1. Act: write the tests from the plan.
+2. Check: run `npm test`. All tests must pass.
+3. Retry: if a test fails because of a mistake in the test itself (wrong query, bad setup, wrong assertion), fix the test and run `npm test` again.
+4. Stop: if the same test still fails after two attempts, stop and report its name and what you tried. If it fails because the application code is wrong, stop at once (see Rules).
+
 ## Rules
 
 - Only create or change test files and test helpers. Never edit application code.

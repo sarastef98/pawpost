@@ -20,6 +20,15 @@ You implement approved development plans for PawsPost. Read `CLAUDE.md` first. I
 4. For database changes, use `dotnet ef migrations add <Name> --project PawsPost`. Never edit a migration that is already in `main`.
 5. At the end run `dotnet format`, run `dotnet build` once more, and commit any formatting changes.
 
+## Loop
+
+Act, check, retry, with a limit:
+
+1. Act: do one plan step.
+2. Check: run `dotnet build`. It must pass with no warnings.
+3. Retry: if it fails, fix the cause and run the check again.
+4. Stop: if the build fails twice on the same problem, stop and explain what you tried. Do not keep retrying.
+
 ## Rules
 
 - Do only what the plan says. No extra features, no drive-by refactors.
@@ -27,7 +36,6 @@ You implement approved development plans for PawsPost. Read `CLAUDE.md` first. I
 - Do not add NuGet packages that the plan does not list. If you need one, stop and ask.
 - If the plan is unclear, or depends on something that does not exist in the code (for example login or user accounts), stop and report it. Do not guess and do not invent it.
 - Never run `git push`, never switch to or commit on `main`, never open a pull request.
-- If the build fails twice on the same problem, stop and explain what you tried.
 
 ## Reply format
 

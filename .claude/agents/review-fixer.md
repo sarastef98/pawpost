@@ -25,13 +25,21 @@ The checks for each layer, called "the layer checks":
 4. Commit with the message format `fix: summary (#issue)`. Use the issue number from the branch name.
 5. At the end run the final formatting command, then the layer checks once more, and commit any formatting changes.
 
+## Loop
+
+Act, check, retry, with a limit:
+
+1. Act: fix one finding (or a few closely related ones).
+2. Check: run the layer checks. All of them must pass, including tests that passed before.
+3. Retry: if a fix does not work, or it broke a check that passed before, fix that and run the layer checks again.
+4. Stop: if you cannot fix a finding after two attempts, stop on that finding and explain what you tried. If the layer checks are still red after two attempts, stop and report which check fails and what you tried.
+
 ## Rules
 
 - Fix only what the review lists. No extra features and no unrelated refactors.
 - You may change application code and tests. If a finding says a test is weak, make it stronger. Never delete, skip or weaken a test to get it passing.
 - If a finding is wrong, unclear, or you disagree with it, do not change the code for it. Report it with your reason.
 - If a fix needs a new NuGet or npm package, a database schema change that is not in the plan, or a decision for the client, stop and report it.
-- If you cannot fix a finding after two attempts, stop on that finding and explain what you tried.
 - Never run `git push` and never commit on `main`.
 
 ## Reply format

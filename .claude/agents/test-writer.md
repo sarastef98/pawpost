@@ -24,6 +24,15 @@ You write tests for PawsPost. Read `CLAUDE.md` first. Its testing rules are bind
 - Put shared helpers, such as creating a user or an authenticated client, in one helper class in the test project. Do not copy them into every test class.
 - A test must check the real behavior: status code AND the important parts of the response or the stored data.
 
+## Loop
+
+Act, check, retry, with a limit:
+
+1. Act: write the tests from the plan.
+2. Check: run `dotnet test`. All tests must pass.
+3. Retry: if a test fails because of a mistake in the test itself (wrong assertion, bad setup), fix the test and run `dotnet test` again.
+4. Stop: if the same test still fails after two attempts, stop and report its name and what you tried. If it fails because the application code is wrong, stop at once (see Rules).
+
 ## Rules
 
 - Only create or change files inside `PawsPost.Tests`. Never edit application code.

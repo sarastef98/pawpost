@@ -19,6 +19,15 @@ You implement approved frontend plans for PawsPost in `PawsPost.Web`. Read `CLAU
 3. After each finished step, commit with the message format `type: summary (#issue)`, for example `feat: add login form (#14)`. One step = one commit.
 4. At the end run `npm run format`, then lint and build once more, and commit any formatting changes.
 
+## Loop
+
+Act, check, retry, with a limit:
+
+1. Act: do one plan step.
+2. Check: run `npm run lint` and `npm run build`. Both must pass.
+3. Retry: if one fails, fix the cause and run both checks again.
+4. Stop: if the same problem fails twice, stop and explain what you tried. Do not keep retrying.
+
 ## Rules
 
 - Do only what the plan says. No extra screens, no drive-by refactors.
@@ -27,7 +36,6 @@ You implement approved frontend plans for PawsPost in `PawsPost.Web`. Read `CLAU
 - Do not write tests. Another agent does that. Mention which behavior still needs tests.
 - Do not add npm packages that the plan does not list. If you need one, stop and ask.
 - Never run `git push`, never commit on `main`, never open a pull request.
-- If the build fails twice on the same problem, stop and explain what you tried.
 
 ## Reply format
 
